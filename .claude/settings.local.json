@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__figma-console__figma_get_status",
+      "mcp__figma-console__figma_get_selection",
+      "mcp__figma-console__figma_get_variables",
+      "mcp__figma-console__figma_get_styles",
+      "mcp__figma-console__figma_get_file_data",
+      "mcp__figma-console__figma_take_screenshot",
+      "mcp__figma-console__figma_execute",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "mcp__figma-console__figma_capture_screenshot",
+      "mcp__figma-console__figma_set_annotations",
+      "Bash(npx tsc *)",
+      "mcp__Claude_Preview__preview_start",
+      "mcp__figma-console__figma_navigate",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-main/src/hooks \\\\ *)",
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5174/)",
+      "Bash(kill %1)",
+      "Bash(curl -s \"http://localhost:5173/src/main.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/src/App.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/src/components/dashboard/DashboardPage.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/src/components/shared/WidgetCard.tsx\")",
+      "Bash(curl -s \"http://localhost:5173/\")",
+      "Bash(cd /Users/yoshita/Downloads/Abroadworks/Timeworks && ls)",
+      "Bash(npm install *)",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-executive/src/components/layout)",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-executive/src/components/widgets)",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-executive/src/components/shared)",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-executive/src/hooks)",
+      "Bash(mkdir -p /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-executive/src/data)",
+      "Bash(curl -s \"http://localhost:5177/src/components/widgets/AttendanceKPI.jsx\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"http://localhost:5177/src/components/widgets/AttendanceKPI.jsx\")",
+      "Bash(curl -s -o /dev/null -w \"HTTP %{http_code}\" http://localhost:5178/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5178/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)"
+    ]
+  }
+}
