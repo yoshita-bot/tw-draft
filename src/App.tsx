@@ -3,6 +3,7 @@ import { useTimerStore } from './store/useTimerStore'
 import { NavSidebar, type AppPage } from './components/NavSidebar/NavSidebar'
 import { DashboardPage } from './components/dashboard/DashboardPage'
 import { EmployeePage } from './components/dashboard/EmployeePage'
+import { ExecutivePage } from './components/executive/ExecutivePage'
 import { ProjectsPanel } from './components/ProjectsPanel/ProjectsPanel'
 import { InfoPanel } from './components/InfoPanel/InfoPanel'
 import { ResizeHandle } from './components/shared/ResizeHandle'
@@ -77,6 +78,9 @@ export default function App() {
         {activePage === 'home' && view === 'me' && (
           <EmployeePage view={view} onViewChange={setView} />
         )}
+
+        {/* Executive homepage — Group 1 (Phil/Rafi) */}
+        {activePage === 'exec' && <ExecutivePage />}
 
         {/* Projects page (preserves full InfoPanel functionality) */}
         {activePage === 'projects' && (

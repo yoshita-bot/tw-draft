@@ -3,6 +3,23 @@
 @theme {
   --font-sans: 'Karla', sans-serif;
   --font-display: 'Montserrat', sans-serif;
+  --font-jakarta: 'Plus Jakarta Sans', sans-serif;
+
+  /* Executive design system */
+  --color-brand: #2D2B8F;
+  --color-brand-light: #EEEDFE;
+  --color-brand-muted: #534AB7;
+  --color-surface-page: #F7F7F6;
+  --color-surface-hover: #F3F3F1;
+  --color-ink: #111110;
+  --color-ink-secondary: #6B6B68;
+  --color-ink-tertiary: #A8A8A5;
+  --color-success: #1A7F4B;
+  --color-success-light: #EAFAF1;
+  --color-warning: #B45309;
+  --color-warning-light: #FEF3C7;
+  --color-danger: #B91C1C;
+  --color-danger-light: #FEF2F2;
 
   /* Brand */
   --color-royal:       #3B71E8;

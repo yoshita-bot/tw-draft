@@ -2,14 +2,14 @@ import { useState } from 'react'
 import {
   Clock, Monitor, CalendarDays, FolderOpen, Users, BarChart2,
   DollarSign, Settings, LayoutDashboard, ChevronDown,
-  PanelLeftClose, PanelLeftOpen, ChevronRight,
+  PanelLeftClose, PanelLeftOpen, ChevronRight, BarChart3,
 } from 'lucide-react'
 import {
   TooltipProvider, Tooltip, TooltipTrigger, TooltipContent,
 } from '@radix-ui/react-tooltip'
 import { cn } from '../../lib/cn'
 
-export type AppPage = 'home' | 'projects'
+export type AppPage = 'home' | 'projects' | 'exec'
 
 interface NavSidebarProps {
   activePage: AppPage
@@ -167,6 +167,37 @@ export function NavSidebar({ activePage, onNavigate }: NavSidebarProps) {
             >
               <LayoutDashboard size={15} className="shrink-0" />
               Home
+            </button>
+          )}
+
+          {/* Executive */}
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => onNavigate('exec')}
+                  className={cn(
+                    'w-full flex justify-center py-2 rounded-lg transition-colors cursor-pointer',
+                    activePage === 'exec' ? `${activeBg} ${activeTxt}` : `${textDefault} ${hoverBg} ${textHover}`,
+                  )}
+                >
+                  <BarChart3 size={16} />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">Executive</TooltipContent>
+            </Tooltip>
+          ) : (
+            <button
+              onClick={() => onNavigate('exec')}
+              className={cn(
+                'flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-left transition-colors cursor-pointer text-xs font-semibold',
+                activePage === 'exec'
+                  ? `${activeBg} ${activeTxt}`
+                  : `${textDefault} ${hoverBg} ${textHover}`,
+              )}
+            >
+              <BarChart3 size={15} className="shrink-0" />
+              Executive
             </button>
           )}
 
