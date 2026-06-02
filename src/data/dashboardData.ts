@@ -73,7 +73,7 @@ export const TODOS = [
 
 export const SCREENSHOTS_PEOPLE = [
   {
-    name: 'Derek Paulson', role: 'Backend Engineer', client: 'Acme Corp', project: 'API Refactor',
+    name: 'Alice Chen', role: 'Backend Engineer', client: 'Acme Corp', project: 'API Refactor',
     shots: [
       { time: '2:41 PM', pct: 72, level: 'high' as const },
       { time: '2:21 PM', pct: 37, level: 'medium' as const },
@@ -81,7 +81,7 @@ export const SCREENSHOTS_PEOPLE = [
     ],
   },
   {
-    name: 'Amy Chen', role: 'Product Designer', client: 'Nova Ltd', project: 'Onboarding Redesign',
+    name: 'Bob Martinez', role: 'Product Designer', client: 'Nova Ltd', project: 'Onboarding Redesign',
     shots: [
       { time: '2:38 PM', pct: 65, level: 'high' as const },
       { time: '2:18 PM', pct: 17, level: 'low' as const },
@@ -89,7 +89,7 @@ export const SCREENSHOTS_PEOPLE = [
     ],
   },
   {
-    name: 'Raj Mehta', role: 'Frontend Dev', client: 'Brex Inc', project: 'Dashboard UI',
+    name: 'Carmen Santos', role: 'Frontend Dev', client: 'Brex Inc', project: 'Dashboard UI',
     shots: [
       { time: '2:35 PM', pct: 55, level: 'high' as const },
       { time: '2:15 PM', pct: 29, level: 'medium' as const },

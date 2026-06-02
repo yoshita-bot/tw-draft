@@ -8,7 +8,7 @@ export function RecentActivity() {
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Recent activity</span>
-        <Link to={ROUTES.timesheets} className="widget-link">View all →</Link>
+        <Link to={ROUTES.activityScreenshots} className="widget-link">View all →</Link>
       </div>
       <div>
         {SCREENSHOTS_PEOPLE.map((p) => {
@@ -22,7 +22,7 @@ export function RecentActivity() {
                   <div className="ss-person-name">{p.name}</div>
                   <div className="ss-person-meta">{p.project} · {p.client}</div>
                 </div>
-                <Link to={ROUTES.activity} className="ss-view-link">View all ›</Link>
+                <Link to={`${ROUTES.activityScreenshots}?worker=${encodeURIComponent(p.name)}&date=today`} className="ss-view-link">View all ›</Link>
               </div>
               <div className="ss-thumbs">
                 {p.shots.map((sh) => (

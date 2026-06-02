@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Link } from 'react-router-dom'
 import {
   ChevronLeft, ChevronRight, CalendarDays, SlidersHorizontal,
@@ -1232,9 +1233,17 @@ function AllScreenCard({ ss, workerColor, project, onClick }: {
 type ViewMode = '10min' | 'all'
 
 export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
+  const [searchParams] = useSearchParams()
   const [viewMode, setViewMode]         = useState<ViewMode>('10min')
-  const [date, setDate]                 = useState(TODAY)
-  const [workerId, setWorkerId]         = useState('w1')
+  const [date, setDate]                 = useState(() => {
+    const d = searchParams.get('date')
+    return (d === 'today' || !d) ? TODAY : d
+  })
+  const [workerId, setWorkerId]         = useState(() => {
+    const name = searchParams.get('worker')
+    if (!name) return 'w1'
+    return WORKERS.find(w => w.name.toLowerCase() === name.toLowerCase())?.id ?? 'w1'
+  })
   const [timezone, setTimezone]         = useState('est')
   const [filterOpen, setFilterOpen]     = useState(false)
   const [lightbox, setLightbox]         = useState<LightboxState | null>(null)
