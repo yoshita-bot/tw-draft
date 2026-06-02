@@ -99,7 +99,12 @@
       "Bash(curl -s http://localhost:3335 -o /dev/null -w \"%{http_code}\")",
       "Bash(cat /tmp/tw-dev.log | tail -40)",
       "Bash(git add *)",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(grep -v \"^\\\\.\\\\.$\")",
+      "Bash(cat)",
+      "Bash(bash /tmp/check_imports.sh)",
+      "Bash(rm /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-main/src/store/useTimerStore.ts)"
     ]
   }
 }
