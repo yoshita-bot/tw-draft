@@ -23,11 +23,11 @@ export const LARGE_WIDGETS_DEF = [
 ]
 
 export const LOW_ACTIVITY_ROWS = [
-  { name: 'Derek Paulson',  role: 'Backend Engineer', pct: 28, trend: -12, hours: '4.2h / day' },
-  { name: 'Amy Chen',       role: 'Product Designer', pct: 34, trend: -8,  hours: '5.1h / day' },
-  { name: 'Oluwaseun Adey', role: 'QA Engineer',      pct: 41, trend: -5,  hours: '6.2h / day' },
-  { name: 'Fiona Walsh',    role: 'Data Analyst',     pct: 44, trend: 0,   hours: '6.6h / day' },
-  { name: 'Raj Mehta',      role: 'Frontend Dev',     pct: 47, trend: -3,  hours: '7.1h / day' },
+  { name: 'Alice Chen',    workerId: 'w1', role: 'Backend Engineer', pct: 28, trend: -12, hours: '4.2h / day' },
+  { name: 'Bob Martinez',  workerId: 'w2', role: 'Product Designer', pct: 34, trend: -8,  hours: '5.1h / day' },
+  { name: 'Carmen Santos', workerId: 'w3', role: 'QA Engineer',      pct: 41, trend: -5,  hours: '6.2h / day' },
+  { name: 'David Kim',     workerId: 'w4', role: 'Data Analyst',     pct: 44, trend: 0,   hours: '6.6h / day' },
+  { name: 'Elena Patel',   workerId: 'w5', role: 'Frontend Dev',     pct: 47, trend: -3,  hours: '7.1h / day' },
 ]
 
 export const WHOS_ONLINE = [

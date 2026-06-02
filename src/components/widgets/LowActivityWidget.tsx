@@ -11,7 +11,7 @@ export function LowActivityWidget() {
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Low activity</span>
-        <Link to={ROUTES.activity} className="widget-link">View in activity report →</Link>
+        <Link to={`${ROUTES.timesheets}?worker=${LOW_ACTIVITY_ROWS[0].workerId}&filter=low-activity`} className="widget-link">View in timesheets →</Link>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
         <span className="kpi-pill pill-warning" style={{ fontSize: 11, padding: '2px 8px' }}>{LOW_ACTIVITY_ROWS.length} flagged</span>
@@ -22,7 +22,7 @@ export function LowActivityWidget() {
           const trendIcon  = r.trend < 0 ? '↘' : '—'
           const trendClass = r.trend < 0 ? 'down' : 'flat'
           return (
-            <div className="la-row" key={r.name}>
+            <Link to={`${ROUTES.timesheets}?worker=${r.workerId}&filter=low-activity`} className="la-row" key={r.name} style={{ textDecoration: 'none', color: 'inherit', display: 'flex', alignItems: 'center', gap: 'inherit' }}>
               <div className="avatar" style={{ width: 34, height: 34, fontSize: 11, fontWeight: 700, flexShrink: 0, background: s.bg, color: s.color }}>{initials(r.name)}</div>
               <div className="la-info">
                 <div className="la-name">{r.name}</div>
@@ -36,7 +36,7 @@ export function LowActivityWidget() {
               </div>
               <span className="la-rate" style={{ color: rateColor(r.pct) }}>{r.pct}%</span>
               <span className={`la-trend ${trendClass}`} title={r.trend < 0 ? `${r.trend}% vs last week` : 'No change'}>{trendIcon}</span>
-            </div>
+            </Link>
           )
         })}
       </div>

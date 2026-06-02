@@ -1075,6 +1075,7 @@ export function TimesheetsPage() {
   useEffect(() => {
     const workerParam = searchParams.get('worker')
     const dateParam   = searchParams.get('date')
+    const filterParam = searchParams.get('filter')
     if (workerParam && WORKERS.find(w => w.id === workerParam)) {
       setWid(workerParam)
       setMode('person')
@@ -1083,8 +1084,11 @@ export function TimesheetsPage() {
       setRangeStart(weekOf(dateParam))
       setRangeEnd(addDays(weekOf(dateParam), 6))
     }
+    if (filterParam === 'low-activity') {
+      setFilterActivityLevels(new Set(['Low']))
+    }
     // Clear params from URL after consuming them
-    if (workerParam || dateParam) setSearchParams({}, { replace: true })
+    if (workerParam || dateParam || filterParam) setSearchParams({}, { replace: true })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [entries, setEntries]   = useState<TimeEntry[]>(INITIAL_ENTRIES)
   const [expanded, setExpanded] = useState<string | null>(null)
