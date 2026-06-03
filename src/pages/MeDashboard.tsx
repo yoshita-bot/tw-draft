@@ -6,10 +6,12 @@ import { ME } from '../data/meMockData'
 // ─── widget definitions ──────────────────────────────────────────────────────
 
 export const ME_SMALL_WIDGETS = [
-  { id: 'me-sw-hours',    label: 'Hours Worked'    },
-  { id: 'me-sw-activity', label: 'Activity Rate'   },
-  { id: 'me-sw-earnings', label: 'Earnings'        },
-  { id: 'me-sw-projects', label: 'Projects Worked' },
+  { id: 'me-sw-hours-today',     label: 'Hours Worked (Today)'  },
+  { id: 'me-sw-hours-week',      label: 'Hours Worked (Weekly)' },
+  { id: 'me-sw-activity-today',  label: 'Activity Rate (Today)' },
+  { id: 'me-sw-activity-week',   label: 'Activity Rate (Weekly)'},
+  { id: 'me-sw-earnings-today',  label: 'Earnings (Today)'      },
+  { id: 'me-sw-earnings-week',   label: 'Earnings (Weekly)'     },
 ]
 
 export const ME_LARGE_WIDGETS = [
@@ -71,64 +73,68 @@ const SW_CARD: import('react').CSSProperties = {
   minWidth: 0,
 }
 
-function HoursWorkedSmall() {
-  const { todayStats, thisWeek } = ME
+function HoursWorkedTodaySmall() {
+  const { todayStats } = ME
   return (
     <div style={SW_CARD}>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Hours Worked</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, flex: 1 }}>
-        <div style={{ flex: 1, paddingRight: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{fmtH(todayStats.hoursWorked)}</div>
-        </div>
-        <div style={{ width: 1, alignSelf: 'stretch', background: '#E5E7EB' }} />
-        <div style={{ flex: 1, paddingLeft: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{thisWeek.hoursWorked}<span style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}> hrs</span></div>
-        </div>
-      </div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{fmtH(todayStats.hoursWorked)}</div>
     </div>
   )
 }
 
-function ActivityRateSmall() {
+function HoursWorkedWeekSmall() {
+  const { thisWeek } = ME
+  return (
+    <div style={SW_CARD}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Hours Worked</div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{thisWeek.hoursWorked}<span style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}> hrs</span></div>
+    </div>
+  )
+}
+
+function ActivityRateTodaySmall() {
   const today = ME.todayStats.activityRate
-  const week  = ME.thisWeek.activityRate
   return (
     <div style={SW_CARD}>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Activity Rate</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0, flex: 1 }}>
-        <div style={{ flex: 1, paddingRight: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: actColor(today), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{today}%</div>
-        </div>
-        <div style={{ width: 1, alignSelf: 'stretch', background: '#E5E7EB' }} />
-        <div style={{ flex: 1, paddingLeft: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Weekly avg</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: actColor(week), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{week}%</div>
-        </div>
-      </div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: actColor(today), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{today}%</div>
     </div>
   )
 }
 
-function EarningsSmall() {
-  const { todayStats, thisWeek } = ME
+function ActivityRateWeekSmall() {
+  const week = ME.thisWeek.activityRate
+  return (
+    <div style={SW_CARD}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Activity Rate</div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Weekly avg</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: actColor(week), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{week}%</div>
+    </div>
+  )
+}
+
+function EarningsTodaySmall() {
+  const { todayStats } = ME
   return (
     <div style={SW_CARD}>
       <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Earnings</div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
-        <div style={{ flex: 1, paddingRight: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${todayStats.earnings.toFixed(2)}</div>
-        </div>
-        <div style={{ width: 1, alignSelf: 'stretch', background: '#E5E7EB' }} />
-        <div style={{ flex: 1, paddingLeft: 12 }}>
-          <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${thisWeek.earnings.toFixed(2)}</div>
-        </div>
-      </div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 8 }}>Clocked out {ME.clockOutTime}</div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${todayStats.earnings.toFixed(2)}</div>
+    </div>
+  )
+}
+
+function EarningsWeekSmall() {
+  const { thisWeek } = ME
+  return (
+    <div style={SW_CARD}>
+      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Earnings</div>
+      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${thisWeek.earnings.toFixed(2)}</div>
     </div>
   )
 }
@@ -183,10 +189,12 @@ function ProjectsWorkedSmall() {
 
 function SmallWidgetById({ id }: { id: string }) {
   switch (id) {
-    case 'me-sw-hours':    return <HoursWorkedSmall />
-    case 'me-sw-activity': return <ActivityRateSmall />
-    case 'me-sw-earnings': return <EarningsSmall />
-    case 'me-sw-projects': return <ProjectsWorkedSmall />
+    case 'me-sw-hours-today':    return <HoursWorkedTodaySmall />
+    case 'me-sw-hours-week':     return <HoursWorkedWeekSmall />
+    case 'me-sw-activity-today': return <ActivityRateTodaySmall />
+    case 'me-sw-activity-week':  return <ActivityRateWeekSmall />
+    case 'me-sw-earnings-today': return <EarningsTodaySmall />
+    case 'me-sw-earnings-week':  return <EarningsWeekSmall />
     default: return null
   }
 }

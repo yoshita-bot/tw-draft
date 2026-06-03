@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, CalendarDays, SlidersHorizontal,
   Download, Clock, Zap, Camera, LayoutGrid, Keyboard, MousePointer2,
   X, ArrowLeft, ArrowRight, Monitor, Trash2, ImageOff, FileText,
-  NotebookPen, CameraOff, Coffee,
+  NotebookPen, CameraOff, Coffee, UserX, Plus, ChevronDown as ChevronDownIcon,
 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { ROUTES } from '../lib/routes'
@@ -753,11 +753,51 @@ interface NoteEntry {
   texts: string[]; primarySeed: number
 }
 
-function AllNotesPanel({ open, onClose, notes, workerColor }: {
+interface SlotOption {
+  id: string; slotLabel: string; project: string; primarySeed: number
+}
+
+function AllNotesPanel({ open, onClose, notes, workerColor, slotOptions, onAddNote }: {
   open: boolean; onClose: () => void
   notes: NoteEntry[]; workerColor: string
+  slotOptions: SlotOption[]
+  onAddNote: (text: string, batchIds: string[]) => void
 }) {
   const totalNotes = notes.reduce((s, n) => s + n.texts.length, 0)
+
+  // Compose state
+  const [composing, setComposing]           = useState(false)
+  const [composeText, setComposeText]       = useState('')
+  const [pickerOpen, setPickerOpen]         = useState(false)
+  const [selectedSlots, setSelectedSlots]   = useState<Set<string>>(new Set())
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
+  function openCompose() {
+    setComposing(true)
+    setComposeText('')
+    setSelectedSlots(new Set())
+    setPickerOpen(false)
+  }
+
+  function closeCompose() {
+    setComposing(false)
+    setComposeText('')
+    setSelectedSlots(new Set())
+    setPickerOpen(false)
+  }
+
+  function toggleSlot(id: string) {
+    setSelectedSlots(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  }
+
+  function handleSave() {
+    const text = composeText.trim()
+    if (!text || selectedSlots.size === 0) return
+    onAddNote(text, Array.from(selectedSlots))
+    closeCompose()
+  }
+
+  const canSave = composeText.trim().length > 0 && selectedSlots.size > 0
 
   return (
     <>
@@ -767,17 +807,143 @@ function AllNotesPanel({ open, onClose, notes, workerColor }: {
         background: '#fff', boxShadow: '-4px 0 24px rgba(0,0,0,0.12)',
         zIndex: 200, transform: open ? 'translateX(0)' : 'translateX(100%)',
         transition: 'transform 0.25s', display: 'flex', flexDirection: 'column',
-      }}>
+      }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ padding: '18px 20px 14px', borderBottom: '1px solid #F0F0F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <NotebookPen width={16} height={16} color="#6C63FF" />
-            <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>All Notes</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>Notes</span>
           </div>
-          <span style={{ fontSize: 12, color: '#9CA3AF', background: '#F3F4F6', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>
-            {totalNotes} note{totalNotes !== 1 ? 's' : ''} · {notes.length} slot{notes.length !== 1 ? 's' : ''}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 12, color: '#9CA3AF', background: '#F3F4F6', borderRadius: 99, padding: '2px 8px', fontWeight: 600 }}>
+              {totalNotes} note{totalNotes !== 1 ? 's' : ''}
+            </span>
+            {!composing && (
+              <button
+                onClick={openCompose}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', border: 'none', borderRadius: 7,
+                  background: '#6C63FF', color: '#fff',
+                  cursor: 'pointer', fontSize: 12, fontWeight: 600,
+                }}
+              >
+                <Plus width={12} height={12} />
+                New note
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* Compose section */}
+        {composing && (
+          <div style={{ borderBottom: '1px solid #E5E7EB', padding: '14px 20px', background: '#FAFAFA', flexShrink: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+              New note
+            </div>
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              autoFocus
+              value={composeText}
+              onChange={e => setComposeText(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleSave() }}
+              placeholder="Write your note…"
+              rows={3}
+              style={{
+                width: '100%', padding: '8px 10px',
+                border: `1px solid ${composeText.trim() ? '#C7C3FF' : '#E5E7EB'}`,
+                borderRadius: 7, fontSize: 12.5, fontFamily: 'inherit', color: '#111827',
+                outline: 'none', resize: 'none', boxSizing: 'border-box',
+                background: '#fff', lineHeight: 1.6, transition: 'border-color 0.15s',
+              }}
+            />
+
+            {/* Slot picker */}
+            <div style={{ marginTop: 8 }}>
+              <button
+                onClick={() => setPickerOpen(x => !x)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, width: '100%',
+                  padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7,
+                  background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#374151',
+                  fontFamily: 'inherit', justifyContent: 'space-between',
+                }}
+              >
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <FileText width={13} height={13} color="#6C63FF" />
+                  {selectedSlots.size === 0
+                    ? 'Select time slots…'
+                    : `${selectedSlots.size} slot${selectedSlots.size !== 1 ? 's' : ''} selected`}
+                </span>
+                <ChevronDownIcon width={13} height={13} color="#9CA3AF" style={{ transform: pickerOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+              </button>
+
+              {pickerOpen && (
+                <div style={{
+                  marginTop: 4, border: '1px solid #E5E7EB', borderRadius: 7,
+                  background: '#fff', maxHeight: 200, overflowY: 'auto',
+                }}>
+                  {slotOptions.length === 0 ? (
+                    <div style={{ padding: '12px', fontSize: 12, color: '#9CA3AF', textAlign: 'center' }}>No slots available</div>
+                  ) : slotOptions.map(slot => (
+                    <label
+                      key={slot.id}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10,
+                        padding: '7px 12px', cursor: 'pointer',
+                        borderBottom: '1px solid #F5F5F5',
+                        background: selectedSlots.has(slot.id) ? '#F5F3FF' : '#fff',
+                        transition: 'background 0.1s',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedSlots.has(slot.id)}
+                        onChange={() => toggleSlot(slot.id)}
+                        style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#6C63FF' }}
+                      />
+                      {/* Thumbnail */}
+                      <div style={{ width: 36, height: 24, borderRadius: 3, overflow: 'hidden', flexShrink: 0 }}>
+                        <ScreenshotImage seed={slot.primarySeed} width={36} height={24} />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 11.5, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {slot.slotLabel}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: workerColor, fontWeight: 600, marginTop: 1 }}>{slot.project}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
+              <span style={{ fontSize: 10.5, color: '#C4C4C4' }}>⌘↵ to save</span>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button onClick={closeCompose} style={{ padding: '5px 12px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#6B7280' }}>
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSave}
+                  disabled={!canSave}
+                  style={{
+                    padding: '5px 14px', border: 'none', borderRadius: 6,
+                    background: canSave ? '#6C63FF' : '#E5E7EB',
+                    color: canSave ? '#fff' : '#9CA3AF',
+                    cursor: canSave ? 'pointer' : 'default',
+                    fontSize: 12, fontWeight: 600,
+                  }}
+                >Save note</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Body */}
         <div style={{ flex: 1, overflowY: 'auto', padding: '16px 20px' }}>
@@ -785,7 +951,7 @@ function AllNotesPanel({ open, onClose, notes, workerColor }: {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '60%', gap: 10, color: '#9CA3AF' }}>
               <FileText width={32} height={32} strokeWidth={1.2} />
               <div style={{ fontSize: 14, fontWeight: 600, color: '#6B7280' }}>No notes yet</div>
-              <div style={{ fontSize: 12, textAlign: 'center' }}>Click the note icon on any screenshot card to add one.</div>
+              <div style={{ fontSize: 12, textAlign: 'center' }}>Use the note icon on any screenshot card, or click "New note" above.</div>
             </div>
           ) : (
             notes.map(n => (
@@ -793,12 +959,9 @@ function AllNotesPanel({ open, onClose, notes, workerColor }: {
 
                 {/* Batch header: thumbnail + meta */}
                 <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #F0F0F0' }}>
-                  {/* Screenshot thumbnail */}
                   <div style={{ width: 90, flexShrink: 0, overflow: 'hidden' }}>
                     <ScreenshotImage seed={n.primarySeed} width={90} height={58} />
                   </div>
-
-                  {/* Meta */}
                   <div style={{ flex: 1, padding: '9px 12px', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                       <span style={{
@@ -846,90 +1009,54 @@ function NoScreenshotCard({ batch }: { batch: ScreenBatch }) {
   return (
     <div style={{
       background: '#FFFBEB', border: '1.5px dashed #FCD34D',
-      borderRadius: 10, overflow: 'hidden',
+      borderRadius: 8, padding: '8px 12px',
+      display: 'flex', alignItems: 'center', gap: 10,
+      minHeight: 0,
     }}>
-      {/* Header chip */}
-      <div style={{ padding: '9px 12px 7px', borderBottom: '1px solid #FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: '#92400E',
-          background: '#FEF3C7', padding: '3px 9px', borderRadius: 99,
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-        }}>
-          <CameraOff width={10} height={10} />
-          No Screenshot
-        </span>
-        <span style={{ fontSize: 10.5, color: '#B45309' }}>Needs review</span>
-      </div>
-
-      {/* Placeholder area */}
       <div style={{
-        height: 140, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 8,
-        background: 'repeating-linear-gradient(45deg, #FFFBEB, #FFFBEB 8px, #FEF9C3 8px, #FEF9C3 16px)',
+        width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+        background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <div style={{ width: 44, height: 44, borderRadius: '50%', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <CameraOff width={22} height={22} color="#D97706" strokeWidth={1.5} />
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 12.5, fontWeight: 700, color: '#92400E' }}>No screenshot captured</div>
-          <div style={{ fontSize: 11, color: '#B45309', marginTop: 3 }}>Tracker may have been paused</div>
-        </div>
+        <CameraOff width={14} height={14} color="#D97706" strokeWidth={1.5} />
       </div>
-
-      {/* Footer */}
-      <div style={{ padding: '8px 12px 10px', borderTop: '1px solid #FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#92400E' }}>
-          {fmtClock12(batch.slotStart)} – {fmtClock12(batch.slotEnd)}
-        </span>
-        <span style={{ fontSize: 11, color: '#D97706', fontWeight: 500 }}>10 min gap</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#92400E', lineHeight: 1.2 }}>No screenshot</div>
+        <div style={{ fontSize: 10.5, color: '#B45309', marginTop: 1 }}>Tracker may have been paused</div>
       </div>
+      <span style={{ fontSize: 10.5, color: '#B45309', fontWeight: 500, flexShrink: 0 }}>
+        {fmtClock12(batch.slotStart)}
+      </span>
     </div>
   )
 }
 
 function BreakCard({ batch }: { batch: ScreenBatch }) {
+  const reason = batch.breakReason ?? 'On break'
+  const isAway = reason.toLowerCase().includes('away')
+  const icon = isAway
+    ? <UserX width={14} height={14} color="#0284C7" strokeWidth={1.5} />
+    : <Coffee width={14} height={14} color="#0284C7" strokeWidth={1.5} />
+
   return (
     <div style={{
       background: '#F0F9FF', border: '1.5px solid #BAE6FD',
-      borderRadius: 10, overflow: 'hidden',
+      borderRadius: 8, padding: '8px 12px',
+      display: 'flex', alignItems: 'center', gap: 10,
+      minHeight: 0,
     }}>
-      {/* Header chip */}
-      <div style={{ padding: '9px 12px 7px', borderBottom: '1px solid #E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{
-          fontSize: 11, fontWeight: 700, color: '#0369A1',
-          background: '#E0F2FE', padding: '3px 9px', borderRadius: 99,
-          display: 'inline-flex', alignItems: 'center', gap: 5,
-        }}>
-          <Coffee width={10} height={10} />
-          On Break
-        </span>
-        <span style={{ fontSize: 10.5, color: '#0284C7' }}>Expected</span>
-      </div>
-
-      {/* Visual area */}
       <div style={{
-        height: 140, display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 10,
-        background: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 100%)',
+        width: 28, height: 28, borderRadius: 6, flexShrink: 0,
+        background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(2,132,199,0.15)' }}>
-          <Coffee width={24} height={24} color="#0284C7" strokeWidth={1.5} />
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#0369A1' }}>
-            {batch.breakReason ?? 'Break'}
-          </div>
-          <div style={{ fontSize: 11, color: '#0284C7', marginTop: 3 }}>No activity tracked</div>
-        </div>
+        {icon}
       </div>
-
-      {/* Footer */}
-      <div style={{ padding: '8px 12px 10px', borderTop: '1px solid #E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#0369A1' }}>
-          {fmtClock12(batch.slotStart)} – {fmtClock12(batch.slotEnd)}
-        </span>
-        <span style={{ fontSize: 11, color: '#0284C7', fontWeight: 500 }}>10 min</span>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 11.5, fontWeight: 700, color: '#0369A1', lineHeight: 1.2 }}>{reason}</div>
+        <div style={{ fontSize: 10.5, color: '#0284C7', marginTop: 1 }}>No activity tracked</div>
       </div>
+      <span style={{ fontSize: 10.5, color: '#0284C7', fontWeight: 500, flexShrink: 0 }}>
+        {fmtClock12(batch.slotStart)}
+      </span>
     </div>
   )
 }
@@ -1059,26 +1186,6 @@ function BatchCard({
               pointerEvents: 'none',
             }}
           >
-            {/* Delete screenshots button */}
-            {!screenshotsDeleted && (
-              <button
-                onClick={e => handleDelete('screenshots', e)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  padding: '4px 9px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                  fontSize: 11, fontWeight: 600,
-                  background: deleteConfirm === 'screenshots' ? '#EF4444' : 'rgba(0,0,0,0.55)',
-                  color: '#fff',
-                  pointerEvents: 'all',
-                  transition: 'background 0.15s',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <ImageOff width={11} height={11} />
-                {deleteConfirm === 'screenshots' ? 'Confirm?' : 'Del. screenshots'}
-              </button>
-            )}
-
             {/* Delete activity button */}
             <button
               onClick={e => handleDelete('activity', e)}
@@ -1255,6 +1362,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
   const [deletedBatchIds, setDeletedBatchIds]       = useState<Set<string>>(new Set())
   const [screenshotsDeleted, setScreenshotsDeleted] = useState<Set<string>>(new Set())
 
+
   // Filters
   const [filterProjects, setFilterProjects]             = useState<string[]>([])
   const [filterActivityMin, setFilterActivityMin]       = useState(0)
@@ -1279,6 +1387,19 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
     }
     return true
   }), [allBatches, deletedBatchIds, filterProjects, filterActivityMin, filterActivityMax, filterActivityLevels])
+
+  // Slot options for the Notes panel compose picker — normal batches only
+  const slotOptions = useMemo((): SlotOption[] =>
+    batches
+      .filter(b => b.type === 'normal')
+      .map(b => ({
+        id: b.id,
+        slotLabel: `${fmtClock12(b.slotStart)} – ${fmtClock12(b.slotEnd)}`,
+        project: b.project,
+        primarySeed: b.screenshots[0]?.seed ?? 0,
+      })),
+    [batches]
+  )
 
   // Sorted note entries for AllNotesPanel — normal batches only
   const noteEntries = useMemo((): NoteEntry[] =>
@@ -1604,6 +1725,12 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
       <AllNotesPanel
         open={notesOpen} onClose={() => setNotesOpen(false)}
         notes={noteEntries} workerColor={worker.color}
+        slotOptions={slotOptions}
+        onAddNote={(text, batchIds) => setNotes(prev => {
+          const next = { ...prev }
+          batchIds.forEach(id => { next[id] = [...(next[id] ?? []), text] })
+          return next
+        })}
       />
 
       {/* Note popup */}

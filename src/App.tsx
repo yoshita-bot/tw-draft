@@ -3,12 +3,12 @@ import { NavSidebar } from './components/NavSidebar'
 import { DashboardPage } from './pages/DashboardPage'
 import { TimesheetsPage } from './pages/TimesheetsPage'
 import { ActivityPage } from './pages/ActivityPage'
+import { ProjectsPage } from './pages/ProjectsPage'
+import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { StubPage } from './pages/StubPage'
 import { ROUTES } from './lib/routes'
 
 const STUB_PATHS = [
-  ROUTES.attendance,
-  ROUTES.projects,
   ROUTES.schedule,
   ROUTES.reports,
   ROUTES.payments,
@@ -30,6 +30,10 @@ export default function App() {
           <Route path={ROUTES.activity} element={<Navigate to={ROUTES.activityScreenshots} replace />} />
           <Route path={ROUTES.activityScreenshots} element={<ActivityPage view="screenshots" />} />
           <Route path={ROUTES.activityApps}        element={<ActivityPage view="apps" />} />
+
+          {/* Projects */}
+          <Route path={ROUTES.projects} element={<ProjectsPage />} />
+          <Route path={`${ROUTES.projects}/:projectId`} element={<ProjectDetailPage />} />
 
           {/* Stub pages — each in-development section has a real route */}
           {STUB_PATHS.map(p => (

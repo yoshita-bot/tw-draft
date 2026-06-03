@@ -17,7 +17,8 @@ export const LARGE_WIDGETS_DEF = [
   { id: 'lw-online',      label: "Who's online" },
   { id: 'lw-limits',      label: 'Weekly limits' },
   { id: 'lw-amounts',     label: 'Amounts owed' },
-  { id: 'lw-timeoff',     label: 'Time off' },
+  { id: 'lw-timeoff-requests',  label: 'Time off requests' },
+  { id: 'lw-timeoff-upcoming',  label: 'Upcoming leaves' },
   { id: 'lw-projects',    label: 'Current project activity' },
   { id: 'lw-todos',       label: 'To-dos' },
 ]
@@ -48,11 +49,11 @@ export const WEEKLY_LIMITS = [
 ]
 
 export const AMOUNTS_OWED = [
-  { name: 'Tomás García', hrs: 39, rate: 55, amt: 2145 },
-  { name: 'Amara Osei',   hrs: 37, rate: 48, amt: 1776 },
-  { name: 'Daniel Abreu', hrs: 38, rate: 42, amt: 1596 },
-  { name: 'Hana Sato',    hrs: 36, rate: 60, amt: 2160 },
-  { name: 'Grace Kim',    hrs: 40, rate: 38, amt: 1520 },
+  { name: 'Tomás García', role: 'UI Designer',      client: 'Acme Corp',  period: 'May 1–15',  hrs: 39, rate: 55, amt: 2145, status: 'overdue'   as const },
+  { name: 'Amara Osei',   role: 'Frontend Dev',     client: 'Nova Ltd',   period: 'May 1–15',  hrs: 37, rate: 48, amt: 1776, status: 'overdue'   as const },
+  { name: 'Daniel Abreu', role: 'Copywriter',        client: 'Internal',   period: 'May 16–31', hrs: 38, rate: 42, amt: 1596, status: 'due-today' as const },
+  { name: 'Hana Sato',    role: 'Product Manager',  client: 'Acme Corp',  period: 'May 16–31', hrs: 36, rate: 60, amt: 2160, status: 'upcoming'  as const, dueLabel: 'Due Jun 5' },
+  { name: 'Grace Kim',    role: 'QA Engineer',       client: 'Nova Ltd',   period: 'May 16–31', hrs: 40, rate: 38, amt: 1520, status: 'upcoming'  as const, dueLabel: 'Due Jun 5' },
 ]
 
 export const PROJECT_ACTIVITY = [

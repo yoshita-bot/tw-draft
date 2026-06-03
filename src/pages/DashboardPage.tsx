@@ -9,7 +9,8 @@ import { LowActivityWidget } from '../components/widgets/LowActivityWidget'
 import { WhosOnlineWidget } from '../components/widgets/WhosOnlineWidget'
 import { WeeklyLimitsWidget } from '../components/widgets/WeeklyLimitsWidget'
 import { AmountsOwedWidget } from '../components/widgets/AmountsOwedWidget'
-import { TimeOffWidget } from '../components/widgets/TimeOffWidget'
+import { TimeOffRequestsWidget } from '../components/widgets/TimeOffRequestsWidget'
+import { TimeOffUpcomingWidget } from '../components/widgets/TimeOffUpcomingWidget'
 import { ProjectActivityWidget } from '../components/widgets/ProjectActivityWidget'
 import { TodosWidget } from '../components/widgets/TodosWidget'
 import { ManageWidgetsDrawer } from '../components/ManageWidgetsDrawer'
@@ -103,7 +104,8 @@ export function DashboardPage() {
             {lv('lw-online')      && <WhosOnlineWidget />}
             {lv('lw-limits')      && <WeeklyLimitsWidget />}
             {lv('lw-amounts')     && <AmountsOwedWidget />}
-            {lv('lw-timeoff')     && <TimeOffWidget />}
+            {lv('lw-timeoff-requests')  && <TimeOffRequestsWidget />}
+            {lv('lw-timeoff-upcoming')  && <TimeOffUpcomingWidget />}
             {lv('lw-projects')    && <ProjectActivityWidget />}
             {lv('lw-todos')       && <TodosWidget />}
           </div>

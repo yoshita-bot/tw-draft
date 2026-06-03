@@ -1,40 +1,87 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, Clock, Activity, CalendarCheck, FolderKanban,
+  LayoutDashboard, Clock, Activity, FolderKanban,
   CalendarDays, BarChart2, CreditCard, Users, Settings,
-  Camera, Monitor, ChevronDown,
+  Camera, Monitor, Star, CheckSquare, UserCheck, UserCog,
+  Trash2, TrendingUp, Calendar, Building2, ChevronDown,
+  DollarSign, ClipboardList,
 } from 'lucide-react'
 import { ROUTES } from '../lib/routes'
 
-const LIVE = new Set([ROUTES.dashboard, ROUTES.timesheets, ROUTES.activity])
+const LIVE = new Set([ROUTES.dashboard, ROUTES.timesheets, ROUTES.activity, ROUTES.activityScreenshots])
 
-const NAV_ITEMS = [
-  { icon: LayoutDashboard, label: 'Dashboard',  path: ROUTES.dashboard  },
-  { icon: Clock,           label: 'Timesheets', path: ROUTES.timesheets },
+type NavChild = { icon: React.ElementType; label: string; path: string }
+type NavItem  = { icon: React.ElementType; label: string; path: string; children?: NavChild[] }
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    icon: LayoutDashboard, label: 'Dashboard', path: ROUTES.dashboard,
+    children: [
+      { icon: Star, label: 'Favourites', path: ROUTES.favourites },
+    ],
+  },
+  { icon: Clock, label: 'Timesheets', path: ROUTES.timesheets },
   {
     icon: Activity, label: 'Activity', path: ROUTES.activity,
     children: [
-      { icon: Camera,  label: 'Screenshots', path: ROUTES.activityScreenshots },
-      { icon: Monitor, label: 'Apps',        path: ROUTES.activityApps        },
+      { icon: Camera,  label: 'Screenshots',         path: ROUTES.activityScreenshots },
+      { icon: Monitor, label: 'App',                 path: ROUTES.activityApps        },
+      { icon: Trash2,  label: 'Deleted Screenshots', path: ROUTES.activityDeleted     },
     ],
   },
-  { icon: CalendarCheck,   label: 'Attendance', path: ROUTES.attendance },
-  { icon: FolderKanban,    label: 'Projects',   path: ROUTES.projects   },
-  { icon: CalendarDays,    label: 'Schedule',   path: ROUTES.schedule   },
-  { icon: BarChart2,       label: 'Reports',    path: ROUTES.reports    },
-  { icon: CreditCard,      label: 'Payments',   path: ROUTES.payments   },
-  { icon: Users,           label: 'People',     path: ROUTES.people     },
-  { icon: Settings,        label: 'Settings',   path: ROUTES.settings   },
+  {
+    icon: FolderKanban, label: 'Project Management', path: ROUTES.projects,
+    children: [
+      { icon: FolderKanban, label: 'Projects', path: ROUTES.projects },
+      { icon: CheckSquare,  label: 'To Dos',   path: ROUTES.todos    },
+    ],
+  },
+  {
+    icon: CalendarDays, label: 'Calendar', path: ROUTES.schedule,
+    children: [
+      { icon: CalendarDays, label: 'Schedules',         path: ROUTES.schedule        },
+      { icon: Calendar,     label: 'Time off requests', path: ROUTES.timeOffRequests },
+    ],
+  },
+  {
+    icon: BarChart2, label: 'Reports', path: ROUTES.reports,
+    children: [
+      { icon: TrendingUp,    label: 'Time & activity',      path: ROUTES.reportsTimeActivity  },
+      { icon: ClipboardList, label: 'Daily Total (weekly)',  path: ROUTES.reportsDailyTotal    },
+      { icon: Clock,         label: 'Time Edits',            path: ROUTES.reportsTimeEdits     },
+      { icon: Activity,      label: 'Work Sessions',         path: ROUTES.reportsWorkSessions  },
+    ],
+  },
+  {
+    icon: Users, label: 'People', path: ROUTES.people,
+    children: [
+      { icon: Users,     label: 'Members', path: ROUTES.people   },
+      { icon: Building2, label: 'Client',  path: ROUTES.clients  },
+      { icon: UserCheck, label: 'Teams',   path: ROUTES.teams    },
+    ],
+  },
+  {
+    icon: DollarSign, label: 'Financials', path: ROUTES.payments,
+    children: [
+      { icon: DollarSign, label: 'Create Payments', path: ROUTES.payments     },
+      { icon: CreditCard, label: 'Past Payments',   path: ROUTES.pastPayments },
+    ],
+  },
+  {
+    icon: Settings, label: 'Settings', path: ROUTES.settings,
+    children: [
+      { icon: Settings, label: 'Organization', path: ROUTES.settings          },
+      { icon: UserCog,  label: 'Employees',    path: ROUTES.settingsEmployees },
+    ],
+  },
 ]
 
 export function NavSidebar() {
   const navigate  = useNavigate()
   const location  = useLocation()
 
-  // Track which parent items are expanded (independent of active route)
   const [expanded, setExpanded] = useState<Set<string>>(() => {
-    // Auto-expand whichever parent contains the current route on first load
     const initial = new Set<string>()
     NAV_ITEMS.forEach(item => {
       if (item.children?.some(c => location.pathname.startsWith(c.path))) {
@@ -44,7 +91,6 @@ export function NavSidebar() {
     return initial
   })
 
-  // If we navigate to a child route externally, auto-expand its parent
   useEffect(() => {
     NAV_ITEMS.forEach(item => {
       if (item.children?.some(c => location.pathname.startsWith(c.path))) {
@@ -90,7 +136,6 @@ export function NavSidebar() {
           const handleMainClick = (e: React.MouseEvent) => {
             e.preventDefault()
             if (hasChildren) {
-              // Navigate to first child; also expand if not already
               navigate(item.children![0].path)
               setExpanded(prev => new Set([...prev, item.path]))
             } else {
@@ -100,7 +145,6 @@ export function NavSidebar() {
 
           return (
             <div key={item.path}>
-              {/* Parent nav item */}
               <a
                 className={`nav-item${isActive ? ' active' : ''}`}
                 href={item.path}
@@ -111,7 +155,6 @@ export function NavSidebar() {
                 <Icon width={16} height={16} strokeWidth={1.8} />
                 <span style={{ flex: 1 }}>{item.label}</span>
 
-                {/* Chevron toggle — only for items with children */}
                 {hasChildren ? (
                   <button
                     onClick={e => toggleExpanded(item.path, e)}
@@ -140,7 +183,6 @@ export function NavSidebar() {
                 )}
               </a>
 
-              {/* Sub-items — visible when expanded */}
               {hasChildren && isExpanded && (
                 <div style={{ marginBottom: 2 }}>
                   {item.children!.map(child => {
