@@ -1,16 +1,51 @@
 import { Bell } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 
-interface TopBarProps {
-  title: string
-  subtitle?: string
+export interface Crumb {
+  label: string
+  path?: string   // omit for the current (last) crumb
 }
 
-export function TopBar({ title, subtitle }: TopBarProps) {
+interface TopBarProps {
+  crumbs: Crumb[]
+}
+
+export function TopBar({ crumbs }: TopBarProps) {
+  const navigate = useNavigate()
+
   return (
     <header className="topbar">
       <div className="topbar-left">
-        <div className="page-title">{title}</div>
-        {subtitle && <div className="page-sub">{subtitle}</div>}
+        <nav style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          {crumbs.map((crumb, i) => {
+            const isLast = i === crumbs.length - 1
+            return (
+              <span key={i} style={{ display: 'flex', alignItems: 'center' }}>
+                {i > 0 && (
+                  <span style={{ margin: '0 6px', color: '#D1D5DB', fontSize: 14, userSelect: 'none' }}>/</span>
+                )}
+                {isLast || !crumb.path ? (
+                  <span style={{ fontSize: 14, fontWeight: isLast ? 600 : 400, color: isLast ? '#111827' : '#9CA3AF' }}>
+                    {crumb.label}
+                  </span>
+                ) : (
+                  <button
+                    onClick={() => crumb.path && navigate(crumb.path)}
+                    style={{
+                      background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                      fontSize: 14, fontWeight: 400, color: '#9CA3AF', fontFamily: 'inherit',
+                      transition: 'color 0.15s',
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.color = '#6C63FF' }}
+                    onMouseLeave={e => { e.currentTarget.style.color = '#9CA3AF' }}
+                  >
+                    {crumb.label}
+                  </button>
+                )}
+              </span>
+            )
+          })}
+        </nav>
       </div>
 
       <div style={{ flex: 1 }} />

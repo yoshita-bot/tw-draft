@@ -6,6 +6,7 @@ export type ProjectMember = {
   fg: string
   role: 'manager' | 'member'
   payRate: number
+  billRate: number
   hoursOnProject: number
   currentTask: string | null
 }
@@ -22,18 +23,18 @@ export type Project = {
 }
 
 export const ALL_MEMBERS: ProjectMember[] = [
-  { id: 'm1', name: 'Tomás García',  initials: 'TG', bg: '#E6F1FB', fg: '#0C447C', role: 'manager', payRate: 85,  hoursOnProject: 124, currentTask: 'Client Portal Redesign' },
-  { id: 'm2', name: 'Nina Patel',    initials: 'NP', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 65,  hoursOnProject: 88,  currentTask: 'UI Review' },
-  { id: 'm3', name: 'Luca Ferrari',  initials: 'LF', bg: '#EEEDFE', fg: '#3C3489', role: 'member',  payRate: 72,  hoursOnProject: 102, currentTask: 'Bug fix — login flow' },
-  { id: 'm4', name: 'Amara Osei',    initials: 'AO', bg: '#E1F5EE', fg: '#085041', role: 'member',  payRate: 58,  hoursOnProject: 76,  currentTask: 'Content Strategy' },
-  { id: 'm5', name: 'Grace Kim',     initials: 'GK', bg: '#FAEEDA', fg: '#633806', role: 'manager', payRate: 90,  hoursOnProject: 140, currentTask: 'Design Review' },
-  { id: 'm6', name: 'Daniel Abreu',  initials: 'DA', bg: '#FAECE7', fg: '#712B13', role: 'member',  payRate: 55,  hoursOnProject: 60,  currentTask: 'Weekly Report' },
-  { id: 'm7', name: 'Marcus Webb',   initials: 'MW', bg: '#E6F1FB', fg: '#0C447C', role: 'manager', payRate: 95,  hoursOnProject: 156, currentTask: 'API Integration' },
-  { id: 'm8', name: 'Elena Volkov',  initials: 'EV', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 68,  hoursOnProject: 94,  currentTask: 'QA Testing' },
-  { id: 'm9', name: 'James Okafor',  initials: 'JO', bg: '#EAF3DE', fg: '#27500A', role: 'member',  payRate: 62,  hoursOnProject: 50,  currentTask: null },
-  { id: 'm10', name: 'Priya Nair',   initials: 'PN', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 70,  hoursOnProject: 80,  currentTask: 'Design System' },
-  { id: 'm11', name: 'Ray Tanaka',   initials: 'RT', bg: '#EEEDFE', fg: '#3C3489', role: 'manager', payRate: 88,  hoursOnProject: 112, currentTask: 'Sprint Planning' },
-  { id: 'm12', name: 'Sofia Muller', initials: 'SM', bg: '#FAEEDA', fg: '#633806', role: 'member',  payRate: 60,  hoursOnProject: 70,  currentTask: 'Data Analysis' },
+  { id: 'm1',  name: 'Tomás García',  initials: 'TG', bg: '#E6F1FB', fg: '#0C447C', role: 'manager', payRate: 85,  billRate: 120, hoursOnProject: 124, currentTask: 'Client Portal Redesign' },
+  { id: 'm2',  name: 'Nina Patel',    initials: 'NP', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 65,  billRate: 95,  hoursOnProject: 88,  currentTask: 'UI Review' },
+  { id: 'm3',  name: 'Luca Ferrari',  initials: 'LF', bg: '#EEEDFE', fg: '#3C3489', role: 'member',  payRate: 72,  billRate: 105, hoursOnProject: 102, currentTask: 'Bug fix — login flow' },
+  { id: 'm4',  name: 'Amara Osei',    initials: 'AO', bg: '#E1F5EE', fg: '#085041', role: 'member',  payRate: 58,  billRate: 85,  hoursOnProject: 76,  currentTask: 'Content Strategy' },
+  { id: 'm5',  name: 'Grace Kim',     initials: 'GK', bg: '#FAEEDA', fg: '#633806', role: 'manager', payRate: 90,  billRate: 130, hoursOnProject: 140, currentTask: 'Design Review' },
+  { id: 'm6',  name: 'Daniel Abreu',  initials: 'DA', bg: '#FAECE7', fg: '#712B13', role: 'member',  payRate: 55,  billRate: 80,  hoursOnProject: 60,  currentTask: 'Weekly Report' },
+  { id: 'm7',  name: 'Marcus Webb',   initials: 'MW', bg: '#E6F1FB', fg: '#0C447C', role: 'manager', payRate: 95,  billRate: 140, hoursOnProject: 156, currentTask: 'API Integration' },
+  { id: 'm8',  name: 'Elena Volkov',  initials: 'EV', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 68,  billRate: 100, hoursOnProject: 94,  currentTask: 'QA Testing' },
+  { id: 'm9',  name: 'James Okafor',  initials: 'JO', bg: '#EAF3DE', fg: '#27500A', role: 'member',  payRate: 62,  billRate: 90,  hoursOnProject: 50,  currentTask: null },
+  { id: 'm10', name: 'Priya Nair',    initials: 'PN', bg: '#FBEAF0', fg: '#72243E', role: 'member',  payRate: 70,  billRate: 100, hoursOnProject: 80,  currentTask: 'Design System' },
+  { id: 'm11', name: 'Ray Tanaka',    initials: 'RT', bg: '#EEEDFE', fg: '#3C3489', role: 'manager', payRate: 88,  billRate: 125, hoursOnProject: 112, currentTask: 'Sprint Planning' },
+  { id: 'm12', name: 'Sofia Muller',  initials: 'SM', bg: '#FAEEDA', fg: '#633806', role: 'member',  payRate: 60,  billRate: 88,  hoursOnProject: 70,  currentTask: 'Data Analysis' },
 ]
 
 export const PROJECTS: Project[] = [

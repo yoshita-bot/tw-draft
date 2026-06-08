@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { ROUTES } from '../lib/routes'
 
-const LIVE = new Set([ROUTES.dashboard, ROUTES.timesheets, ROUTES.activity, ROUTES.activityScreenshots])
+const LIVE = new Set([ROUTES.dashboard, ROUTES.timesheets, ROUTES.activity, ROUTES.activityScreenshots, ROUTES.reportsTimeActivity])
 
 type NavChild = { icon: React.ElementType; label: string; path: string }
 type NavItem  = { icon: React.ElementType; label: string; path: string; children?: NavChild[] }
@@ -34,7 +34,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: FolderKanban, label: 'Project Management', path: ROUTES.projects,
     children: [
       { icon: FolderKanban, label: 'Projects', path: ROUTES.projects },
-      { icon: CheckSquare,  label: 'To Dos',   path: ROUTES.todos    },
+      { icon: CheckSquare,  label: 'Tasks',   path: ROUTES.todos    },
     ],
   },
   {
@@ -42,6 +42,7 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { icon: CalendarDays, label: 'Schedules',         path: ROUTES.schedule        },
       { icon: Calendar,     label: 'Time off requests', path: ROUTES.timeOffRequests },
+      { icon: Calendar,     label: 'My time off',       path: ROUTES.myTimeOff       },
     ],
   },
   {
@@ -177,7 +178,7 @@ export function NavSidebar() {
                   !isLive && (
                     <span style={{
                       width: 5, height: 5, borderRadius: '50%', flexShrink: 0,
-                      background: isActive ? '#6C63FF' : '#D1D5DB',
+                      background: isActive ? '#6271FF' : '#D1D5DB',
                     }} />
                   )
                 )}
@@ -201,12 +202,12 @@ export function NavSidebar() {
                           textDecoration: 'none', cursor: 'pointer',
                           fontSize: 12.5,
                           fontWeight: isChildActive ? 600 : 400,
-                          color: isChildActive ? '#6C63FF' : '#6B7280',
-                          background: isChildActive ? '#F0EEFF' : 'transparent',
+                          color: isChildActive ? '#6271FF' : '#6A6D76',
+                          background: isChildActive ? '#E0EAFF' : 'transparent',
                           transition: 'background 0.15s, color 0.15s',
                         }}
                         onMouseEnter={e => {
-                          if (!isChildActive) (e.currentTarget as HTMLElement).style.background = '#F9FAFB'
+                          if (!isChildActive) (e.currentTarget as HTMLElement).style.background = '#F6F6F6'
                         }}
                         onMouseLeave={e => {
                           if (!isChildActive) (e.currentTarget as HTMLElement).style.background = 'transparent'

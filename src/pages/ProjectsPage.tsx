@@ -1,9 +1,10 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Plus, Search, Eye, Pencil, Trash2, X, Check, ChevronDown } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { PROJECTS, ALL_MEMBERS, type Project, type ProjectMember } from '../data/projectsData'
-import { ROUTES } from '../lib/routes'
+import { ROUTES, clientPage } from '../lib/routes'
+import { getSharedTasks } from './TaskDetailPage'
 
 // Pre-compute client + project associations for each member
 function buildMemberMeta() {
@@ -80,10 +81,55 @@ function MemberPicker({
 }) {
   const [open, setOpen] = useState(false)
   const [query, setQuery] = useState('')
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const filtered = ALL_MEMBERS.filter(m => memberMatchesQuery(m, query))
   const allFilteredIds = filtered.map(m => m.id)
   const allFilteredSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.includes(id))
+
+  // Position the fixed dropdown under the trigger button
+  const updatePos = useCallback(() => {
+    if (!triggerRef.current) return
+    const r = triggerRef.current.getBoundingClientRect()
+    // prefer opening downward; if not enough space, open upward
+    const spaceBelow = window.innerHeight - r.bottom
+    const dropH = Math.min(320, window.innerHeight * 0.5)
+    const top = spaceBelow >= dropH ? r.bottom + 4 : r.top - dropH - 4
+    setDropdownPos({ top, left: r.left, width: r.width })
+  }, [])
+
+  function openDropdown() {
+    updatePos()
+    setOpen(true)
+  }
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (
+        triggerRef.current?.contains(e.target as Node) ||
+        dropdownRef.current?.contains(e.target as Node)
+      ) return
+      setOpen(false)
+      setQuery('')
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
+
+  // Reposition on scroll/resize while open
+  useEffect(() => {
+    if (!open) return
+    window.addEventListener('scroll', updatePos, true)
+    window.addEventListener('resize', updatePos)
+    return () => {
+      window.removeEventListener('scroll', updatePos, true)
+      window.removeEventListener('resize', updatePos)
+    }
+  }, [open, updatePos])
 
   function toggle(id: string) {
     onChange(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
@@ -93,13 +139,12 @@ function MemberPicker({
     if (allFilteredSelected) {
       onChange(selected.filter(id => !allFilteredIds.includes(id)))
     } else {
-      const merged = [...new Set([...selected, ...allFilteredIds])]
-      onChange(merged)
+      onChange([...new Set([...selected, ...allFilteredIds])])
     }
   }
 
   return (
-    <div style={{ position: 'relative' }}>
+    <div>
       <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: '#374151', marginBottom: 5 }}>
         {label}
       </label>
@@ -112,7 +157,7 @@ function MemberPicker({
             if (!m) return null
             return (
               <span key={id} style={{
-                display: 'flex', alignItems: 'center', gap: 4,
+                display: 'inline-flex', alignItems: 'center', gap: 4,
                 background: '#EEEDFF', color: '#6C63FF', fontSize: 11.5, fontWeight: 500,
                 padding: '3px 6px 3px 8px', borderRadius: 99,
               }}>
@@ -131,27 +176,45 @@ function MemberPicker({
       )}
 
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => open ? setOpen(false) : openDropdown()}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 10px', border: '1px solid #D1D5DB', borderRadius: 7, background: '#fff',
-          cursor: 'pointer', fontSize: 13, color: selected.length ? '#374151' : '#9CA3AF', fontFamily: 'inherit',
+          padding: '9px 12px', border: `1px solid ${open ? '#6C63FF' : '#D1D5DB'}`, borderRadius: 8,
+          background: '#fff', cursor: 'pointer', fontSize: 13,
+          color: selected.length ? '#374151' : '#9CA3AF', fontFamily: 'inherit',
+          boxShadow: open ? '0 0 0 3px rgba(108,99,255,0.12)' : 'none',
+          transition: 'border-color 0.15s, box-shadow 0.15s',
         }}
       >
         <span>{selected.length === 0 ? `Select ${label.toLowerCase()}…` : `${selected.length} selected`}</span>
-        <ChevronDown width={13} height={13} color="#9CA3AF" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
+        <ChevronDown
+          width={13} height={13} color="#9CA3AF"
+          style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s', flexShrink: 0 }}
+        />
       </button>
 
-      {open && (
-        <div style={{
-          position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100,
-          background: '#fff', border: '1px solid #D1D5DB', borderRadius: 8, marginTop: 4,
-          boxShadow: '0 6px 24px rgba(0,0,0,0.10)',
-        }}>
-          <div style={{ padding: '8px 8px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E5E7EB', borderRadius: 6, padding: '5px 8px', background: '#F9FAFB' }}>
-              <Search width={12} height={12} color="#9CA3AF" />
+      {/* Fixed-position dropdown — renders outside modal overflow context */}
+      {open && dropdownPos && (
+        <div
+          ref={dropdownRef}
+          style={{
+            position: 'fixed',
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
+            zIndex: 9999,
+            background: '#fff',
+            border: '1px solid #D1D5DB',
+            borderRadius: 10,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
+          }}
+        >
+          {/* search */}
+          <div style={{ padding: '10px 10px 0' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E5E7EB', borderRadius: 7, padding: '6px 10px', background: '#F9FAFB' }}>
+              <Search width={12} height={12} color="#9CA3AF" style={{ flexShrink: 0 }} />
               <input
                 autoFocus
                 value={query}
@@ -167,37 +230,39 @@ function MemberPicker({
             </div>
           </div>
 
-          {/* select all row */}
+          {/* select all */}
           {filtered.length > 0 && (
-            <div style={{ padding: '6px 8px 2px', borderBottom: '1px solid #F3F4F6' }}>
+            <div style={{ padding: '6px 10px 0', borderBottom: '1px solid #F3F4F6' }}>
               <button
                 type="button"
                 onClick={toggleSelectAll}
                 style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                  padding: '6px 8px', borderRadius: 6, border: 'none',
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                  padding: '7px 8px', borderRadius: 6, border: 'none',
                   background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+                  marginBottom: 4,
                 }}
                 onMouseEnter={e => { e.currentTarget.style.background = '#F9FAFB' }}
                 onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
               >
                 <div style={{
-                  width: 16, height: 16, borderRadius: 4, border: `2px solid ${allFilteredSelected ? '#6C63FF' : '#D1D5DB'}`,
+                  width: 16, height: 16, borderRadius: 4,
+                  border: `2px solid ${allFilteredSelected ? '#6C63FF' : '#D1D5DB'}`,
                   background: allFilteredSelected ? '#6C63FF' : '#fff',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
                 }}>
                   {allFilteredSelected && <Check width={10} height={10} color="#fff" strokeWidth={3} />}
                 </div>
-                <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>
+                <span style={{ fontSize: 12.5, color: '#374151', fontWeight: 500 }}>
                   {allFilteredSelected ? 'Deselect all' : `Select all${query ? ' matching' : ''}`}
-                  {' '}
-                  <span style={{ color: '#9CA3AF' }}>({filtered.length})</span>
+                  <span style={{ color: '#9CA3AF', fontWeight: 400, marginLeft: 4 }}>({filtered.length})</span>
                 </span>
               </button>
             </div>
           )}
 
-          <div style={{ maxHeight: 200, overflowY: 'auto', padding: '4px 8px 8px' }}>
+          {/* member list */}
+          <div style={{ maxHeight: 220, overflowY: 'auto', padding: '6px 10px 8px' }}>
             {filtered.map(m => {
               const isSelected = selected.includes(m.id)
               const memberClients = clientsMap[m.id] ? [...clientsMap[m.id]] : []
@@ -208,17 +273,17 @@ function MemberPicker({
                   type="button"
                   onClick={() => toggle(m.id)}
                   style={{
-                    width: '100%', display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '7px 8px', borderRadius: 6, border: 'none',
+                    width: '100%', display: 'flex', alignItems: 'center', gap: 9,
+                    padding: '7px 8px', borderRadius: 7, border: 'none',
                     background: isSelected ? '#F0EEFF' : 'transparent',
                     cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
                   }}
                   onMouseEnter={e => { if (!isSelected) e.currentTarget.style.background = '#F9FAFB' }}
-                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = 'transparent' }}
+                  onMouseLeave={e => { if (!isSelected) e.currentTarget.style.background = isSelected ? '#F0EEFF' : 'transparent' }}
                 >
-                  <Avatar initials={m.initials} bg={m.bg} fg={m.fg} size={24} />
+                  <Avatar initials={m.initials} bg={m.bg} fg={m.fg} size={26} />
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12.5, color: '#374151', fontWeight: isSelected ? 600 : 400 }}>{m.name}</div>
+                    <div style={{ fontSize: 13, color: '#111827', fontWeight: isSelected ? 600 : 400 }}>{m.name}</div>
                     {(memberClients.length > 0 || memberProjects.length > 0) && (
                       <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {memberClients.join(', ')}
@@ -227,12 +292,12 @@ function MemberPicker({
                       </div>
                     )}
                   </div>
-                  {isSelected && <Check width={13} height={13} color="#6C63FF" style={{ flexShrink: 0 }} />}
+                  {isSelected && <Check width={14} height={14} color="#6C63FF" style={{ flexShrink: 0 }} />}
                 </button>
               )
             })}
             {filtered.length === 0 && (
-              <div style={{ padding: '10px 8px', fontSize: 12.5, color: '#9CA3AF', textAlign: 'center' }}>No results</div>
+              <div style={{ padding: '14px 8px', fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No results</div>
             )}
           </div>
         </div>
@@ -307,7 +372,7 @@ function ProjectModal({
       position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.3)', zIndex: 300,
       display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24,
     }} onClick={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.15)', display: 'flex', flexDirection: 'column', maxHeight: '90vh' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: '100%', maxWidth: 600, boxShadow: '0 24px 64px rgba(0,0,0,0.18)', display: 'flex', flexDirection: 'column', maxHeight: '92vh' }}>
         {/* header */}
         <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid #E8E8E8', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{mode === 'add' ? 'Add Project' : 'Edit Project'}</div>
@@ -317,7 +382,7 @@ function ProjectModal({
         </div>
 
         {/* body */}
-        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '20px 20px 4px' }}>
+        <form onSubmit={handleSubmit} style={{ flex: 1, overflowY: 'auto', padding: '24px 24px 8px' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* name */}
@@ -390,31 +455,255 @@ function ProjectModal({
   )
 }
 
+// ── Column definitions ────────────────────────────────────────────────────
+
+type ColId = 'name' | 'client' | 'members' | 'managers' | 'status' | 'billing' | 'tasks' | 'actions'
+
+type ColDef = {
+  id: ColId
+  label: string
+  sortKey?: SortKey
+  locked?: boolean   // always shown, can't hide
+  align?: 'right'
+}
+
+const ALL_COLS: ColDef[] = [
+  { id: 'name',     label: 'Project',  sortKey: 'name',   locked: true },
+  { id: 'client',   label: 'Client',   sortKey: 'client' },
+  { id: 'members',  label: 'Members' },
+  { id: 'managers', label: 'Managers' },
+  { id: 'status',   label: 'Status' },
+  { id: 'billing',  label: 'Billing' },
+  { id: 'tasks',    label: 'Tasks',    sortKey: 'tasks' },
+  { id: 'actions',  label: 'Actions',  locked: true, align: 'right' },
+]
+
+// ── Filter dropdown (generic) ─────────────────────────────────────────────
+
+function FilterSelect({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: string
+  options: { value: string; label: string }[]
+  onChange: (v: string) => void
+}) {
+  const isActive = value !== ''
+  return (
+    <div style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          appearance: 'none', WebkitAppearance: 'none',
+          padding: '7px 28px 7px 10px',
+          border: `1px solid ${isActive ? '#6C63FF' : '#E8E8E8'}`,
+          borderRadius: 7, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer',
+          background: isActive ? '#EEEDFF' : '#fff',
+          color: isActive ? '#6C63FF' : '#6B7280',
+          fontWeight: isActive ? 600 : 400,
+          outline: 'none',
+        }}
+      >
+        <option value="">{label}</option>
+        {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+      </select>
+      <ChevronDown width={11} height={11} color={isActive ? '#6C63FF' : '#9CA3AF'} style={{ position: 'absolute', right: 8, pointerEvents: 'none' }} />
+    </div>
+  )
+}
+
+// ── Column manager panel ──────────────────────────────────────────────────
+
+function ColumnManager({
+  cols,
+  visible,
+  onToggle,
+  onReorder,
+}: {
+  cols: ColDef[]
+  visible: Set<ColId>
+  onToggle: (id: ColId) => void
+  onReorder: (newOrder: ColDef[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [dragIdx, setDragIdx] = useState<number | null>(null)
+  const [overIdx, setOverIdx] = useState<number | null>(null)
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const [pos, setPos] = useState<{ top: number; right: number } | null>(null)
+
+  function openPanel() {
+    if (!btnRef.current) return
+    const r = btnRef.current.getBoundingClientRect()
+    setPos({ top: r.bottom + 6, right: window.innerWidth - r.right })
+    setOpen(true)
+  }
+
+  useEffect(() => {
+    if (!open) return
+    function onDown(e: MouseEvent) {
+      if (btnRef.current?.contains(e.target as Node) || panelRef.current?.contains(e.target as Node)) return
+      setOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+
+  const activeCount = cols.filter(c => !c.locked && visible.has(c.id)).length
+
+  function handleDragStart(idx: number) { setDragIdx(idx) }
+  function handleDragOver(e: React.DragEvent, idx: number) { e.preventDefault(); setOverIdx(idx) }
+  function handleDrop(targetIdx: number) {
+    if (dragIdx === null || dragIdx === targetIdx) { setDragIdx(null); setOverIdx(null); return }
+    const next = [...cols]
+    const [moved] = next.splice(dragIdx, 1)
+    next.splice(targetIdx, 0, moved)
+    onReorder(next)
+    setDragIdx(null); setOverIdx(null)
+  }
+
+  return (
+    <>
+      <button
+        ref={btnRef}
+        onClick={() => open ? setOpen(false) : openPanel()}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '7px 12px', border: `1px solid ${open ? '#6C63FF' : '#E8E8E8'}`,
+          borderRadius: 7, background: open ? '#EEEDFF' : '#fff',
+          color: open ? '#6C63FF' : '#6B7280', fontSize: 12.5, fontWeight: 500,
+          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}
+      >
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+          <rect x="1" y="1" width="14" height="3" rx="1"/><rect x="1" y="6.5" width="14" height="3" rx="1"/><rect x="1" y="12" width="14" height="3" rx="1"/>
+        </svg>
+        Columns
+        {activeCount > 0 && (
+          <span style={{ background: '#6C63FF', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '0px 5px', lineHeight: '16px' }}>
+            {activeCount}
+          </span>
+        )}
+      </button>
+
+      {open && pos && (
+        <div
+          ref={panelRef}
+          style={{
+            position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999,
+            background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.12)', width: 240, overflow: 'hidden',
+          }}
+        >
+          <div style={{ padding: '12px 14px 8px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#374151' }}>Manage columns</span>
+            <span style={{ fontSize: 11, color: '#9CA3AF' }}>Drag to reorder</span>
+          </div>
+          <div style={{ padding: '6px 8px 8px' }}>
+            {cols.map((col, idx) => {
+              const isOver = overIdx === idx && dragIdx !== idx
+              return (
+                <div
+                  key={col.id}
+                  draggable
+                  onDragStart={() => handleDragStart(idx)}
+                  onDragOver={e => handleDragOver(e, idx)}
+                  onDrop={() => handleDrop(idx)}
+                  onDragEnd={() => { setDragIdx(null); setOverIdx(null) }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 8px', borderRadius: 7, cursor: 'grab',
+                    background: isOver ? '#F0EEFF' : dragIdx === idx ? '#F9FAFB' : 'transparent',
+                    borderTop: isOver ? '2px solid #6C63FF' : '2px solid transparent',
+                    transition: 'background 0.1s',
+                    opacity: dragIdx === idx ? 0.5 : 1,
+                  }}
+                >
+                  {/* drag handle */}
+                  <svg width="12" height="12" viewBox="0 0 12 12" fill="#D1D5DB">
+                    <circle cx="4" cy="3" r="1.2"/><circle cx="8" cy="3" r="1.2"/>
+                    <circle cx="4" cy="6" r="1.2"/><circle cx="8" cy="6" r="1.2"/>
+                    <circle cx="4" cy="9" r="1.2"/><circle cx="8" cy="9" r="1.2"/>
+                  </svg>
+                  <span style={{ flex: 1, fontSize: 13, color: col.locked ? '#9CA3AF' : '#374151', fontWeight: 500 }}>{col.label}</span>
+                  {col.locked ? (
+                    <span style={{ fontSize: 10, color: '#D1D5DB', fontWeight: 500 }}>always</span>
+                  ) : (
+                    <label className="toggle" style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+                      <input type="checkbox" checked={visible.has(col.id)} onChange={() => onToggle(col.id)} />
+                      <span className="toggle-slider" />
+                    </label>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 // ── Main page ──────────────────────────────────────────────────────────────
+
+const ALL_CLIENTS = [...new Set(PROJECTS.map(p => p.client))].sort()
 
 export function ProjectsPage() {
   const navigate = useNavigate()
   const [projects, setProjects] = useState<Project[]>(PROJECTS)
-  const [search, setSearch] = useState('')
-  const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all')
+  const [search, setSearch]         = useState('')
+  const [filterClient, setFilterClient]   = useState('')
+  const [filterStatus, setFilterStatus]   = useState('')   // '' | 'active' | 'inactive'
+  const [filterBillable, setFilterBillable] = useState('') // '' | 'billable' | 'non-billable'
   const [sortKey, setSortKey] = useState<SortKey>('name')
   const [modal, setModal] = useState<null | { mode: 'add' } | { mode: 'edit'; project: Project }>(null)
+
+  // Column visibility + order
+  const [colOrder, setColOrder] = useState<ColDef[]>(ALL_COLS)
+  const [visibleCols, setVisibleCols] = useState<Set<ColId>>(
+    new Set(ALL_COLS.map(c => c.id))
+  )
+
+  function toggleCol(id: ColId) {
+    setVisibleCols(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // Derived: active columns in order
+  const activeCols = colOrder.filter(c => c.locked || visibleCols.has(c.id))
+
+  const activeFilters = [filterClient, filterStatus, filterBillable].filter(Boolean).length
 
   const filtered = useMemo(() => {
     let list = projects.filter(p => {
       const q = search.toLowerCase()
-      return p.name.toLowerCase().includes(q) || p.client.toLowerCase().includes(q)
+      if (q && !p.name.toLowerCase().includes(q) && !p.client.toLowerCase().includes(q)) return false
+      if (filterClient && p.client !== filterClient) return false
+      if (filterStatus === 'active' && !p.active) return false
+      if (filterStatus === 'inactive' && p.active) return false
+      if (filterBillable === 'billable' && !p.billable) return false
+      if (filterBillable === 'non-billable' && p.billable) return false
+      return true
     })
-    if (filterStatus === 'active') list = list.filter(p => p.active)
-    if (filterStatus === 'inactive') list = list.filter(p => !p.active)
     list = [...list].sort((a, b) => {
-      if (sortKey === 'name') return a.name.localeCompare(b.name)
+      if (sortKey === 'name')   return a.name.localeCompare(b.name)
       if (sortKey === 'client') return a.client.localeCompare(b.client)
-      if (sortKey === 'tasks') return b.tasks.length - a.tasks.length
+      if (sortKey === 'tasks')  return b.tasks.length - a.tasks.length
       return 0
     })
     return list
-  }, [projects, search, filterStatus, sortKey])
+  }, [projects, search, filterClient, filterStatus, filterBillable, sortKey])
+
+  function clearFilters() {
+    setFilterClient(''); setFilterStatus(''); setFilterBillable('')
+  }
 
   function handleSave(form: FormState) {
     if (modal?.mode === 'add') {
@@ -439,23 +728,105 @@ export function ProjectsPage() {
     }
   }
 
-  const SortTh = ({ col, label }: { col: SortKey; label: string }) => (
-    <th
-      onClick={() => setSortKey(col)}
-      style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: sortKey === col ? '#6C63FF' : '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}
-    >
-      {label} {sortKey === col ? '↑' : ''}
-    </th>
-  )
+  // Render a single cell for a column
+  function renderCell(col: ColDef, project: Project) {
+    const memberOnly = project.memberIds.filter(id => !project.managerIds.includes(id))
+    switch (col.id) {
+      case 'name':
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            <button
+              onClick={() => navigate(`${ROUTES.projects}/${project.id}`)}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
+            >
+              <div style={{ fontSize: 13.5, fontWeight: 600, color: '#6C63FF' }}>{project.name}</div>
+            </button>
+          </td>
+        )
+      case 'client':
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            <button
+              onClick={() => navigate(clientPage(project.client))}
+              style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13, color: '#374151', textDecoration: 'underline', textDecorationColor: 'transparent', transition: 'color 0.15s, text-decoration-color 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.color = '#6C63FF'; e.currentTarget.style.textDecorationColor = '#6C63FF' }}
+              onMouseLeave={e => { e.currentTarget.style.color = '#374151'; e.currentTarget.style.textDecorationColor = 'transparent' }}
+            >
+              {project.client}
+            </button>
+          </td>
+        )
+      case 'members':
+        return <td key={col.id} style={{ padding: '12px 14px' }}><AvatarStack ids={memberOnly} projectManagerIds={project.managerIds} /></td>
+      case 'managers':
+        return <td key={col.id} style={{ padding: '12px 14px' }}><AvatarStack ids={project.managerIds} projectManagerIds={project.managerIds} /></td>
+      case 'status':
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
+              borderRadius: 99, fontSize: 11.5, fontWeight: 600,
+              background: project.active ? '#DCFCE7' : '#F3F4F6',
+              color: project.active ? '#16A34A' : '#6B7280',
+            }}>
+              <span style={{ width: 5, height: 5, borderRadius: '50%', background: project.active ? '#16A34A' : '#9CA3AF' }} />
+              {project.active ? 'Active' : 'Inactive'}
+            </span>
+          </td>
+        )
+      case 'billing':
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            <span style={{
+              display: 'inline-flex', padding: '3px 9px', borderRadius: 99, fontSize: 11.5, fontWeight: 600,
+              background: project.billable ? '#EFF6FF' : '#F3F4F6',
+              color: project.billable ? '#1D4ED8' : '#6B7280',
+            }}>
+              {project.billable ? 'Billable' : 'Non-billable'}
+            </span>
+          </td>
+        )
+      case 'tasks': {
+        const taskCount = getSharedTasks().filter(t => t.projectId === project.id).length
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            {taskCount > 0 ? (
+              <button
+                onClick={e => { e.stopPropagation(); navigate(`${ROUTES.todos}?project=${project.id}`, { state: { crumbs: [{ label: 'Project Management' }, { label: 'Projects', path: ROUTES.projects }] } }) }}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'inherit', padding: 0, color: '#6C63FF', fontSize: 13, fontWeight: 600 }}
+                onMouseEnter={e => e.currentTarget.style.textDecoration = 'underline'}
+                onMouseLeave={e => e.currentTarget.style.textDecoration = 'none'}
+              >
+                {taskCount} task{taskCount !== 1 ? 's' : ''}
+              </button>
+            ) : (
+              <span style={{ fontSize: 13, color: '#D1D5DB' }}>—</span>
+            )}
+          </td>
+        )
+      }
+      case 'actions':
+        return (
+          <td key={col.id} style={{ padding: '12px 14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+              <ActionBtn icon={<Eye width={13} height={13} />}    title="View"   onClick={() => navigate(`${ROUTES.projects}/${project.id}`)} />
+              <ActionBtn icon={<Pencil width={13} height={13} />} title="Edit"   onClick={() => setModal({ mode: 'edit', project })} />
+              <ActionBtn icon={<Trash2 width={13} height={13} />} title="Delete" onClick={() => handleDelete(project.id)} danger />
+            </div>
+          </td>
+        )
+      default: return null
+    }
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <TopBar title="Projects" subtitle="Project Management" />
+      <TopBar crumbs={[{ label: 'Project Management' }, { label: 'Projects' }]} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', background: '#F7F8FA' }}>
 
-        {/* toolbar */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+        {/* ── Toolbar row 1: search + actions ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
           <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
             <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -465,104 +836,87 @@ export function ProjectsPage() {
               style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#111827' }}
             />
           </div>
-
-          {(['all', 'active', 'inactive'] as const).map(s => (
-            <button key={s} onClick={() => setFilterStatus(s)} style={{
-              padding: '7px 14px', borderRadius: 7, border: '1px solid', fontSize: 12.5, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
-              borderColor: filterStatus === s ? '#6C63FF' : '#E8E8E8',
-              background: filterStatus === s ? '#EEEDFF' : '#fff',
-              color: filterStatus === s ? '#6C63FF' : '#6B7280',
-            }}>
-              {s.charAt(0).toUpperCase() + s.slice(1)}
-            </button>
-          ))}
-
-          <div style={{ marginLeft: 'auto' }}>
+          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+            <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
             <button
               onClick={() => setModal({ mode: 'add' })}
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#6C63FF', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              <Plus width={14} height={14} />
-              Add Project
+              <Plus width={14} height={14} /> Add Project
             </button>
           </div>
         </div>
 
-        {/* table */}
+        {/* ── Toolbar row 2: filters ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          <FilterSelect
+            label="All clients"
+            value={filterClient}
+            options={ALL_CLIENTS.map(c => ({ value: c, label: c }))}
+            onChange={setFilterClient}
+          />
+          <FilterSelect
+            label="Any status"
+            value={filterStatus}
+            options={[{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }]}
+            onChange={setFilterStatus}
+          />
+          <FilterSelect
+            label="Any billing"
+            value={filterBillable}
+            options={[{ value: 'billable', label: 'Billable' }, { value: 'non-billable', label: 'Non-billable' }]}
+            onChange={setFilterBillable}
+          />
+          {activeFilters > 0 && (
+            <button
+              onClick={clearFilters}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px', border: '1px solid #FCA5A5', borderRadius: 7, background: '#FEF2F2', color: '#EF4444', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <X width={11} height={11} /> Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
+            </button>
+          )}
+        </div>
+
+        {/* ── Table ── */}
         <div style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
-                <SortTh col="name" label="Project" />
-                <SortTh col="client" label="Client" />
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}>Members</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}>Managers</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}>Status</th>
-                <th style={{ padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}>Billing</th>
-                <SortTh col="tasks" label="Tasks" />
-                <th style={{ padding: '10px 14px', textAlign: 'right', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA' }}>Actions</th>
+                {activeCols.map(col => {
+                  const isSorted = col.sortKey && sortKey === col.sortKey
+                  return (
+                    <th
+                      key={col.id}
+                      onClick={() => col.sortKey && setSortKey(col.sortKey)}
+                      style={{
+                        padding: '10px 14px', textAlign: col.align === 'right' ? 'right' : 'left',
+                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                        whiteSpace: 'nowrap', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA',
+                        color: isSorted ? '#6C63FF' : '#9CA3AF',
+                        cursor: col.sortKey ? 'pointer' : 'default', userSelect: 'none',
+                      }}
+                    >
+                      {col.label}{isSorted ? ' ↑' : ''}
+                    </th>
+                  )
+                })}
               </tr>
             </thead>
             <tbody>
-              {filtered.map((project, idx) => {
-                const memberOnly = project.memberIds.filter(id => !project.managerIds.includes(id))
-                return (
-                  <tr
-                    key={project.id}
-                    style={{ borderTop: idx === 0 ? 'none' : '1px solid #F3F4F6' }}
-                    onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
-                    onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-                  >
-                    <td style={{ padding: '12px 14px' }}>
-                      <button
-                        onClick={() => navigate(`${ROUTES.projects}/${project.id}`)}
-                        style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit' }}
-                      >
-                        <div style={{ fontSize: 13.5, fontWeight: 600, color: '#6C63FF' }}>{project.name}</div>
-                      </button>
-                    </td>
-                    <td style={{ padding: '12px 14px', fontSize: 13, color: '#374151' }}>{project.client}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <AvatarStack ids={memberOnly} projectManagerIds={project.managerIds} />
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <AvatarStack ids={project.managerIds} projectManagerIds={project.managerIds} />
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
-                        borderRadius: 99, fontSize: 11.5, fontWeight: 600,
-                        background: project.active ? '#DCFCE7' : '#F3F4F6',
-                        color: project.active ? '#16A34A' : '#6B7280',
-                      }}>
-                        <span style={{ width: 5, height: 5, borderRadius: '50%', background: project.active ? '#16A34A' : '#9CA3AF' }} />
-                        {project.active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <span style={{
-                        display: 'inline-flex', padding: '3px 9px', borderRadius: 99, fontSize: 11.5, fontWeight: 600,
-                        background: project.billable ? '#EFF6FF' : '#F3F4F6',
-                        color: project.billable ? '#1D4ED8' : '#6B7280',
-                      }}>
-                        {project.billable ? 'Billable' : 'Non-billable'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', fontSize: 13, color: '#374151' }}>{project.tasks.length}</td>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
-                        <ActionBtn icon={<Eye width={13} height={13} />} title="View" onClick={() => navigate(`${ROUTES.projects}/${project.id}`)} />
-                        <ActionBtn icon={<Pencil width={13} height={13} />} title="Edit" onClick={() => setModal({ mode: 'edit', project })} />
-                        <ActionBtn icon={<Trash2 width={13} height={13} />} title="Delete" onClick={() => handleDelete(project.id)} danger />
-                      </div>
-                    </td>
-                  </tr>
-                )
-              })}
+              {filtered.map((project, idx) => (
+                <tr
+                  key={project.id}
+                  style={{ borderTop: idx === 0 ? 'none' : '1px solid #F3F4F6' }}
+                  onMouseEnter={e => (e.currentTarget.style.background = '#FAFAFA')}
+                  onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                >
+                  {activeCols.map(col => renderCell(col, project))}
+                </tr>
+              ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} style={{ padding: '40px 14px', textAlign: 'center', fontSize: 13, color: '#9CA3AF' }}>
-                    No projects match your search.
+                  <td colSpan={activeCols.length} style={{ padding: '40px 14px', textAlign: 'center', fontSize: 13, color: '#9CA3AF' }}>
+                    No projects match your filters.
                   </td>
                 </tr>
               )}
@@ -571,7 +925,7 @@ export function ProjectsPage() {
         </div>
 
         <div style={{ marginTop: 12, fontSize: 12, color: '#9CA3AF' }}>
-          {filtered.length} project{filtered.length !== 1 ? 's' : ''}
+          Showing {filtered.length} of {projects.length} project{projects.length !== 1 ? 's' : ''}
         </div>
       </div>
 

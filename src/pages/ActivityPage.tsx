@@ -1465,7 +1465,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <TopBar title={view === 'apps' ? 'Activity · Apps' : 'Activity · Screenshots'} />
+      <TopBar crumbs={[{ label: 'Activity' }, { label: view === 'apps' ? 'Apps' : 'Screenshots' }]} />
 
       {view === 'apps' ? (
         <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px' }}>

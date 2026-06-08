@@ -1296,7 +1296,7 @@ export function TimesheetsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }} onClick={() => actionsOpen && setActionsOpen(null as any)}>
-      <TopBar title="View & edit timesheets" />
+      <TopBar crumbs={[{ label: 'Timesheets' }]} />
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px', background: '#F7F8FA' }}>
 

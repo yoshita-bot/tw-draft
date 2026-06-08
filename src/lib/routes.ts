@@ -13,8 +13,10 @@ export const ROUTES = {
   activityDeleted:      '/activity/deleted',
   projects:             '/projects',
   todos:                '/todos',
+  todoDetail:           '/todos/:taskId',
   schedule:             '/schedule',
   timeOffRequests:      '/time-off-requests',
+  myTimeOff:            '/my-time-off',
   reports:              '/reports',
   reportsTimeActivity:  '/reports/time-activity',
   reportsDailyTotal:    '/reports/daily-total',
@@ -30,6 +32,16 @@ export const ROUTES = {
 } as const
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES]
+
+export type Crumb = { label: string; path?: string }
+
+/** Read ancestor crumbs passed via navigation state */
+export function getStateCrumbs(state: unknown): Crumb[] | null {
+  if (state && typeof state === 'object' && 'crumbs' in state) {
+    return (state as { crumbs: Crumb[] }).crumbs
+  }
+  return null
+}
 
 /** Navigate to Timesheets pre-filtered to a specific worker */
 export function timesheetsForWorker(workerId: string) {

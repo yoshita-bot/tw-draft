@@ -1,21 +1,29 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Karla:wght@400;600;700&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 :root {
-  --bg: #F7F8FA;
+  /* TimeWorks Design System — Color Tokens (Light mode) */
+  --bg: #F3F5F8;           /* grey-background-color */
   --white: #FFFFFF;
-  --border: #E8E8E8;
-  --accent: #6C63FF;
-  --accent-light: #EEEDff;
-  --success: #22C55E;
-  --warning: #F59E0B;
-  --danger: #EF4444;
-  --muted: #6B7280;
-  --text: #111827;
+  --surface: #F6F6F6;      /* primary-surface-color */
+  --border: #D1D5DB;       /* ui-border-color */
+  --layout-border: rgba(15,23,42,0.1); /* layout-border-color */
+  --accent: #6271FF;       /* primary-color */
+  --accent-hover: #1039AD; /* primary-hover-color */
+  --accent-light: #E0EAFF; /* primary-highlighted-color */
+  --accent-selected: #C7D9FF; /* primary-selected-color */
+  --success: #5FB54E;      /* positive-color */
+  --warning: #FACC15;      /* warning-color */
+  --danger: #D94150;       /* negative-color */
+  --muted: #6A6D76;        /* secondary-text-color */
+  --text: #30343F;         /* primary-text-color */
+  --icon: #676879;         /* icon-color */
+  --link: #1447C4;         /* link-color */
   --sidebar-w: 260px;
   --topbar-h: 56px;
 }
-html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; color: var(--text); background: var(--bg); }
+html, body { height: 100%; font-family: 'Karla', sans-serif; font-size: 14px; color: var(--text); background: var(--bg); }
+h1, h2, h3, h4, h5, h6 { font-family: 'Montserrat', sans-serif; }
 
 /* ── LAYOUT ── */
 .shell { display: flex; height: 100vh; overflow: hidden; }
@@ -341,7 +349,7 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 .online-person-info { min-width: 0; }
 .online-name { font-size: 13px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .online-task { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.online-project { font-size: 11px; color: #6C63FF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.online-project { font-size: 11px; color: var(--accent); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .activity-badge { display: inline-flex; align-items: center; justify-content: center; padding: 3px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 700; min-width: 44px; }
 .activity-badge.high   { background: #DCFCE7; color: #15803D; }
 .activity-badge.medium { background: #FEF9C3; color: #A16207; }
@@ -383,12 +391,12 @@ html, body { height: 100%; font-family: 'Inter', sans-serif; font-size: 14px; co
 .aw-badge { font-size: 10px; font-weight: 500; padding: 3px 8px; border-radius: 99px; white-space: nowrap; text-align: center; }
 .aw-badge-overdue { background: #FCEBEB; color: #A32D2D; border: 0.5px solid #F7C1C1; }
 .aw-badge-due-today { background: #FAEEDA; color: #854F0B; border: 0.5px solid #EFD4A4; }
-.aw-badge-upcoming { background: var(--bg2); color: var(--muted); border: 0.5px solid var(--border); }
+.aw-badge-upcoming { background: var(--surface); color: var(--muted); border: 0.5px solid var(--border); }
 .aw-chevron { font-size: 12px; color: var(--muted); }
 .aw-footer { border-top: 0.5px solid var(--border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; }
 .aw-footer-note { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
-.aw-process-btn { font-size: 12px; font-weight: 500; background: #534AB7; color: #fff; border: none; border-radius: 8px; padding: 6px 14px; cursor: pointer; transition: background 0.15s; }
-.aw-process-btn:hover { background: #423BAA; }
+.aw-process-btn { font-size: 12px; font-weight: 500; background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 6px 14px; cursor: pointer; transition: background 0.15s; }
+.aw-process-btn:hover { background: var(--accent-hover); }
 .amounts-sub { font-size: 12px; color: var(--muted); margin-top: -10px; margin-bottom: 14px; }
 
 /* ── SCROLLBAR ── */

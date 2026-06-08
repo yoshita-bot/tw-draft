@@ -48,7 +48,7 @@ export function DashboardPage() {
 
   return (
     <>
-      <TopBar title="Dashboard" />
+      <TopBar crumbs={[{ label: 'Dashboard' }]} />
       <main className="content">
         {/* View scope toggle */}
         <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: 99, padding: 3, gap: 2, width: 'fit-content', marginBottom: 20 }}>
