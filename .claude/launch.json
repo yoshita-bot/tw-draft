@@ -5,7 +5,7 @@
       "name": "timeworks",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 3335
+      "port": 5173
     }
   ]
 }
