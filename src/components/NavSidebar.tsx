@@ -65,7 +65,7 @@ const NAV_ITEMS: NavItem[] = [
   {
     icon: DollarSign, label: 'Financials', path: ROUTES.payments,
     children: [
-      { icon: DollarSign, label: 'Create Payments', path: ROUTES.payments     },
+      { icon: DollarSign, label: 'Create Payments', path: ROUTES.payments },
       { icon: CreditCard, label: 'Past Payments',   path: ROUTES.pastPayments },
     ],
   },

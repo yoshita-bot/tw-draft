@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { X, ChevronDown } from 'lucide-react'
 import { setSharedTasks } from '../pages/TaskDetailPage'
 import { ALL_MEMBERS, PROJECTS } from '../data/projectsData'
-import { getMemberById, defaultRepeat, repeatLabel, type Task, type TaskStatus, type TaskPriority, type RepeatConfig, type RepeatMode } from '../data/tasksData'
+import { getMemberById, defaultRepeat, repeatLabel, type Task, type TaskStatus, type TaskPriority, type RepeatConfig } from '../data/tasksData'
 
 const CURRENT_USER_ID = 'm1'
 
@@ -41,29 +41,50 @@ function SelectField({ label, value, onChange, options }: {
   )
 }
 
-// ─── Repeat section (prototype design) ───────────────────────────────────────
-const WEEK_DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-const MODES: { key: RepeatMode; label: string }[] = [
-  { key: 'daily',   label: 'Daily' },
-  { key: 'weekly',  label: 'Weekly' },
-  { key: 'monthly', label: 'Monthly' },
-  { key: 'after',   label: 'After done' },
-  { key: 'custom',  label: 'On a date' },
-]
+// ─── Repeat section ───────────────────────────────────────────────────────────
+const WD_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const WD_FULL   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday']
+
+type RepeatPreset = 'none' | 'daily' | 'weekly' | 'monthly' | 'custom'
+
+function repeatToPreset(r: RepeatConfig): RepeatPreset {
+  if (!r.enabled) return 'none'
+  if (r.mode === 'daily' && r.dailyEvery === 1 && r.dailyUnit === 'days') return 'daily'
+  if (r.mode === 'weekly' && r.weeklyEvery === 1) return 'weekly'
+  if (r.mode === 'monthly' && r.monthlyEvery === 1) return 'monthly'
+  return 'custom'
+}
 
 function RepeatSection({ value, onChange }: { value: RepeatConfig; onChange: (r: RepeatConfig) => void }) {
+  const today = new Date()
+  const dow = today.getDay()
+  const dom = today.getDate()
+
+  const [forceCustom, setForceCustom] = useState(repeatToPreset(value) === 'custom')
+  const preset = forceCustom ? 'custom' : repeatToPreset(value)
+
+  const sb: React.CSSProperties = {
+    width: '100%', border: '1px solid #E5E7EB', borderRadius: 6, padding: '7px 28px 7px 11px',
+    fontSize: 13.5, color: '#1F2328', fontFamily: 'inherit', outline: 'none',
+    appearance: 'none', background: '#fff', cursor: 'pointer',
+  }
+  const ib: React.CSSProperties = {
+    border: '1px solid #E5E7EB', borderRadius: 6, padding: '7px 10px',
+    fontSize: 13.5, color: '#1F2328', fontFamily: 'inherit', outline: 'none', background: '#fff',
+  }
+
   function set<K extends keyof RepeatConfig>(key: K, val: RepeatConfig[K]) {
     onChange({ ...value, [key]: val })
   }
 
-  const GREEN = '#1D9E75'
-  const inputBase: React.CSSProperties = {
-    border: '0.5px solid #E5E7EB', borderRadius: 6, padding: '7px 9px',
-    fontSize: 13.5, color: '#111827', fontFamily: 'inherit', outline: 'none', background: '#fff',
+  function applyPreset(p: RepeatPreset) {
+    if (p === 'none')    { setForceCustom(false); onChange({ ...value, enabled: false }); return }
+    if (p === 'daily')   { setForceCustom(false); onChange({ ...value, enabled: true, mode: 'daily',   dailyEvery: 1,   dailyUnit: 'days' }); return }
+    if (p === 'weekly')  { setForceCustom(false); onChange({ ...value, enabled: true, mode: 'weekly',  weeklyEvery: 1,  weekDays: [dow] }); return }
+    if (p === 'monthly') { setForceCustom(false); onChange({ ...value, enabled: true, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDays: [dom] }); return }
+    setForceCustom(true)
+    onChange({ ...value, enabled: true })
   }
-  const numInput: React.CSSProperties = { ...inputBase, width: 72, textAlign: 'center' }
-  const selInput: React.CSSProperties = { ...inputBase, width: '100%', appearance: 'none', cursor: 'pointer' }
-  const subLabel: React.CSSProperties = { fontSize: 12, color: '#6B7280', marginBottom: 6, marginTop: 10 }
 
   function toggleDay(i: number) {
     const days = value.weekDays.includes(i)
@@ -72,190 +93,116 @@ function RepeatSection({ value, onChange }: { value: RepeatConfig; onChange: (r:
     set('weekDays', days)
   }
 
-  // mode-specific config panel
-  function renderConfig() {
-    if (value.mode === 'daily') return (
-      <div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>Repeat every</div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <input type="number" min={1} value={value.dailyEvery}
-            onChange={e => set('dailyEvery', Math.max(1, parseInt(e.target.value) || 1))}
-            style={numInput} />
-          <div style={{ position: 'relative', flex: 1 }}>
-            <select value={value.dailyUnit} onChange={e => set('dailyUnit', e.target.value as RepeatConfig['dailyUnit'])} style={selInput}>
-              <option value="days">days</option>
-              <option value="weeks">weeks</option>
-            </select>
-            <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-          </div>
-        </div>
-      </div>
-    )
-
-    if (value.mode === 'weekly') return (
-      <div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>Repeat every</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input type="number" min={1} value={value.weeklyEvery}
-            onChange={e => set('weeklyEvery', Math.max(1, parseInt(e.target.value) || 1))}
-            style={numInput} />
-          <div style={{ ...inputBase, flex: 1, opacity: 0.5, display: 'flex', alignItems: 'center' }}>week(s)</div>
-        </div>
-        <div style={subLabel}>On which days?</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {WEEK_DAY_LABELS.map((d, i) => {
-            const on = value.weekDays.includes(i)
-            return (
-              <button key={i} type="button" onClick={() => toggleDay(i)} style={{
-                padding: '5px 11px', borderRadius: 20, border: `0.5px solid ${on ? GREEN : '#E5E7EB'}`,
-                background: on ? GREEN : '#fff', color: on ? '#fff' : '#6B7280',
-                fontSize: 12, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.15s',
-              }}>{d}</button>
-            )
-          })}
-        </div>
-      </div>
-    )
-
-    if (value.mode === 'monthly') return (
-      <div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>Repeat every</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input type="number" min={1} max={12} value={value.monthlyEvery}
-            onChange={e => set('monthlyEvery', Math.max(1, parseInt(e.target.value) || 1))}
-            style={numInput} />
-          <div style={{ ...inputBase, flex: 1, opacity: 0.5, display: 'flex', alignItems: 'center' }}>month(s)</div>
-        </div>
-        <div style={subLabel}>On which day?</div>
-        <div style={{ position: 'relative', marginBottom: 8 }}>
-          <select value={value.monthType} onChange={e => set('monthType', e.target.value as RepeatConfig['monthType'])} style={selInput}>
-            <option value="date">Specific date — e.g. the 3rd</option>
-            <option value="weekday">Specific weekday — e.g. 2nd Tuesday</option>
-            <option value="last">Last day of month</option>
-          </select>
-          <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-        </div>
-        {value.monthType === 'date' && (
-          <div style={{ position: 'relative' }}>
-            <select value={value.monthDay}
-              onChange={e => set('monthDay', parseInt(e.target.value))} style={selInput}>
-              {Array.from({ length: 28 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>{ordStr(i + 1)} of the month</option>
-              ))}
-              <option value={29}>Last day of the month</option>
-            </select>
-            <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-          </div>
-        )}
-        {value.monthType === 'weekday' && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <select value={value.monthOrd} onChange={e => set('monthOrd', parseInt(e.target.value) as 1|2|3|4)} style={selInput}>
-                {[1,2,3,4].map(n => <option key={n} value={n}>{['1st','2nd','3rd','4th'][n-1]}</option>)}
-              </select>
-              <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-            </div>
-            <div style={{ position: 'relative', flex: 1 }}>
-              <select value={value.monthWd} onChange={e => set('monthWd', parseInt(e.target.value))} style={selInput}>
-                {WEEK_DAY_LABELS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-              </select>
-              <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-            </div>
-          </div>
-        )}
-      </div>
-    )
-
-    if (value.mode === 'after') return (
-      <div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>Reschedule after completion by</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
-          <input type="number" min={1} value={value.afterN}
-            onChange={e => set('afterN', Math.max(1, parseInt(e.target.value) || 1))}
-            style={numInput} />
-          <div style={{ position: 'relative', flex: 1 }}>
-            <select value={value.afterUnit} onChange={e => set('afterUnit', e.target.value as RepeatConfig['afterUnit'])} style={selInput}>
-              <option value="days">days</option>
-              <option value="weeks">weeks</option>
-              <option value="months">months</option>
-              <option value="years">years</option>
-            </select>
-            <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
-          </div>
-        </div>
-        <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>
-          Next due date is set the moment someone marks this task complete.
-        </div>
-      </div>
-    )
-
-    if (value.mode === 'custom') return (
-      <div>
-        <div style={{ fontSize: 12, color: '#6B7280', marginBottom: 6 }}>Next due date</div>
-        <input type="date" value={value.customDate}
-          onChange={e => set('customDate', e.target.value)}
-          style={{ ...inputBase, width: '100%', marginBottom: 8 }} />
-        <div style={{ fontSize: 12, color: '#9CA3AF', lineHeight: 1.5 }}>
-          Set the date manually each time. Good for irregular schedules.
-        </div>
-      </div>
-    )
-
-    return null
+  function toggleMonthDay(d: number) {
+    const days = value.monthDays.includes(d)
+      ? value.monthDays.filter(x => x !== d)
+      : [...value.monthDays, d].sort((a, b) => a - b)
+    set('monthDays', days)
   }
 
-  const summary = value.enabled ? repeatLabel(value) : ''
+  const everyN = value.mode === 'weekly' ? value.weeklyEvery : value.mode === 'monthly' ? value.monthlyEvery : value.dailyEvery
 
   return (
-    <div style={{ borderTop: '0.5px solid #E5E7EB', paddingTop: 18 }}>
-      {/* Toggle */}
-      <div
-        onClick={() => set('enabled', !value.enabled)}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none', marginBottom: value.enabled ? 16 : 0 }}
-      >
-        <div style={{ width: 36, height: 20, borderRadius: 10, background: value.enabled ? GREEN : '#D1D5DB', position: 'relative', transition: 'background 0.2s', flexShrink: 0 }}>
-          <span style={{ width: 16, height: 16, borderRadius: '50%', background: '#fff', position: 'absolute', top: 2, left: value.enabled ? 18 : 2, transition: 'left 0.2s', display: 'block', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+    <div style={{ borderTop: '0.5px solid #E5E7EB', paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* Frequency dropdown */}
+      <div>
+        <label style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 6 }}>Frequency</label>
+        <div style={{ position: 'relative' }}>
+          <select value={preset} onChange={e => applyPreset(e.target.value as RepeatPreset)} style={sb}>
+            <option value="none">Does not repeat</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly on {WD_FULL[dow]}</option>
+            <option value="monthly">Monthly on day {dom}</option>
+            <option value="custom">Custom…</option>
+          </select>
+          <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
         </div>
-        <span style={{ fontSize: 14, fontWeight: 500, color: '#111827' }}>Repeat this task</span>
       </div>
 
-      {value.enabled && (
+      {/* Custom panel */}
+      {preset === 'custom' && (
         <>
-          {/* Segmented mode picker */}
-          <div style={{ display: 'flex', border: '0.5px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', marginBottom: 12 }}>
-            {MODES.map(m => (
-              <button key={m.key} type="button" onClick={() => set('mode', m.key)} style={{
-                flex: 1, padding: '7px 2px', fontSize: 12, textAlign: 'center', cursor: 'pointer',
-                background: value.mode === m.key ? '#F3F4F6' : '#fff',
-                color: value.mode === m.key ? '#111827' : '#6B7280',
-                fontWeight: value.mode === m.key ? 500 : 400,
-                border: 'none', borderRight: '0.5px solid #E5E7EB', fontFamily: 'inherit',
-              }}>
-                {m.label}
-              </button>
-            ))}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 6 }}>Repeats every</label>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="number" min={1} value={everyN}
+                onChange={e => {
+                  const n = Math.max(1, +e.target.value || 1)
+                  if (value.mode === 'daily')   set('dailyEvery', n)
+                  if (value.mode === 'weekly')  set('weeklyEvery', n)
+                  if (value.mode === 'monthly') set('monthlyEvery', n)
+                }}
+                style={{ ...ib, width: 64, textAlign: 'center' }} />
+              <div style={{ position: 'relative', flex: 1 }}>
+                <select
+                  value={value.mode === 'monthly' ? 'month' : value.mode === 'weekly' ? 'week' : 'day'}
+                  onChange={e => {
+                    const u = e.target.value
+                    if (u === 'day')   onChange({ ...value, mode: 'daily',   dailyEvery: 1,   dailyUnit: 'days' })
+                    if (u === 'week')  onChange({ ...value, mode: 'weekly',  weeklyEvery: 1,  weekDays: value.weekDays.length ? value.weekDays : [dow] })
+                    if (u === 'month') onChange({ ...value, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDays: [dom] })
+                  }}
+                  style={sb}>
+                  <option value="day">day(s)</option>
+                  <option value="week">week(s)</option>
+                  <option value="month">month(s)</option>
+                </select>
+                <ChevronDown width={12} height={12} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', color: '#9CA3AF' }} />
+              </div>
+            </div>
           </div>
 
-          {/* Mode config */}
-          <div style={{ background: '#F9FAFB', borderRadius: 8, padding: 12, marginBottom: summary ? 10 : 0 }}>
-            {renderConfig()}
-          </div>
+          {value.mode === 'weekly' && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>On</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {WD_LABELS.map((d, i) => {
+                  const on = value.weekDays.includes(i)
+                  return (
+                    <button key={i} type="button" onClick={() => toggleDay(i)} style={{
+                      width: 36, height: 36, borderRadius: '50%',
+                      border: `1px solid ${on ? '#1D9E75' : '#E5E7EB'}`,
+                      background: on ? '#1D9E75' : '#fff',
+                      color: on ? '#fff' : '#6B7280',
+                      fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>{d[0]}</button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
-          {/* Live summary */}
-          {summary && (
-            <div style={{ padding: '8px 12px', border: '0.5px solid #E5E7EB', borderRadius: 8, fontSize: 13, color: '#6B7280', background: '#fff' }}>
-              Repeats: <span style={{ color: '#111827', fontWeight: 500 }}>{summary}</span>
+          {value.mode === 'monthly' && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.07em', display: 'block', marginBottom: 8 }}>On</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                {Array.from({ length: 31 }, (_, i) => {
+                  const d = i + 1
+                  const on = value.monthDays.includes(d)
+                  return (
+                    <button key={d} type="button" onClick={() => toggleMonthDay(d)} style={{
+                      width: 34, height: 30, borderRadius: 6,
+                      border: `1px solid ${on ? '#1D9E75' : '#E5E7EB'}`,
+                      background: on ? '#1D9E75' : '#fff',
+                      color: on ? '#fff' : '#6B7280',
+                      fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                    }}>{d}</button>
+                  )
+                })}
+              </div>
             </div>
           )}
         </>
       )}
+
+      {/* Summary */}
+      {value.enabled && (
+        <div style={{ fontSize: 12.5, color: '#57606A', background: '#F6F8FA', borderRadius: 6, padding: '8px 12px' }}>
+          {repeatLabel(value)}
+        </div>
+      )}
     </div>
   )
-}
-
-function ordStr(n: number): string {
-  const v = n % 100, s = ['th', 'st', 'nd', 'rd']
-  return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
 // ─── Modal ────────────────────────────────────────────────────────────────────

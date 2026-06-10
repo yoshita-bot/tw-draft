@@ -8,17 +8,22 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { TasksPage } from './pages/TasksPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { StubPage } from './pages/StubPage'
+import { PeoplePage } from './pages/PeoplePage'
+import { PersonProfilePage } from './pages/PersonProfilePage'
 import { SchedulesPage } from './pages/SchedulesPage'
 import { TimeOffRequestsPage } from './pages/TimeOffRequestsPage'
 import { EmployeeTimeOffPage } from './pages/EmployeeTimeOffPage'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { TimeActivityPage } from './pages/TimeActivityPage'
+import { ClientsPage } from './pages/ClientsPage'
+import { ClientProfilePage } from './pages/ClientProfilePage'
+import { TeamsPage } from './pages/TeamsPage'
+import { TeamDetailPage } from './pages/TeamDetailPage'
+import { PaymentsPage } from './pages/PaymentsPage'
 import { ROUTES } from './lib/routes'
 
 const STUB_PATHS = [
   ROUTES.reports,
-  ROUTES.payments,
-  ROUTES.people,
   ROUTES.settings,
 ] as const
 
@@ -54,11 +59,25 @@ export default function App() {
             {/* Reports */}
             <Route path={ROUTES.reportsTimeActivity} element={<ErrorBoundary><TimeActivityPage /></ErrorBoundary>} />
 
+            {/* People */}
+            <Route path={ROUTES.people} element={<ErrorBoundary><PeoplePage /></ErrorBoundary>} />
+            <Route path={`${ROUTES.people}/:workerId`} element={<ErrorBoundary><PersonProfilePage /></ErrorBoundary>} />
+
+            {/* Clients */}
+            <Route path={ROUTES.clients} element={<ErrorBoundary><ClientsPage /></ErrorBoundary>} />
+            <Route path={`${ROUTES.clients}/:clientId`} element={<ErrorBoundary><ClientProfilePage /></ErrorBoundary>} />
+
+            {/* Teams */}
+            <Route path={ROUTES.teams} element={<ErrorBoundary><TeamsPage /></ErrorBoundary>} />
+            <Route path={`${ROUTES.teams}/:teamId`} element={<ErrorBoundary><TeamDetailPage /></ErrorBoundary>} />
+
+            {/* Payments */}
+            <Route path={ROUTES.payments} element={<ErrorBoundary><PaymentsPage /></ErrorBoundary>} />
+
             {/* Stub pages */}
             {STUB_PATHS.map(p => (
               <Route key={p} path={p} element={<ErrorBoundary><StubPage path={p} /></ErrorBoundary>} />
             ))}
-            <Route path={`${ROUTES.people}/:workerId`} element={<ErrorBoundary><StubPage path={ROUTES.people} /></ErrorBoundary>} />
 
             <Route path="*" element={<Navigate to={ROUTES.dashboard} replace />} />
           </Routes>

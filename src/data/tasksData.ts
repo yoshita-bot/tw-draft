@@ -17,7 +17,7 @@ export type RepeatConfig = {
   // monthly
   monthlyEvery: number
   monthType: 'date' | 'weekday' | 'last'
-  monthDay: number                 // 1–28
+  monthDays: number[]              // 1–31, multi-select
   monthOrd: 1 | 2 | 3 | 4
   monthWd: number                  // 0–6
   // after done
@@ -32,7 +32,7 @@ export function defaultRepeat(): RepeatConfig {
     enabled: false, mode: 'daily',
     dailyEvery: 1, dailyUnit: 'days',
     weeklyEvery: 1, weekDays: [0, 1, 2, 3, 4],
-    monthlyEvery: 1, monthType: 'date', monthDay: 1, monthOrd: 1, monthWd: 0,
+    monthlyEvery: 1, monthType: 'date', monthDays: [1], monthOrd: 1, monthWd: 0,
     afterN: 1, afterUnit: 'days',
     customDate: '',
   }
@@ -60,7 +60,8 @@ export function repeatLabel(r: RepeatConfig): string {
       const ords = ['1st', '2nd', '3rd', '4th']
       return `${freq}, on the ${ords[r.monthOrd - 1]} ${DAYS[r.monthWd]}`
     }
-    return `${freq}, on the ${ordinal(r.monthDay)}`
+    const days = r.monthDays.length ? r.monthDays.map(ordinal).join(', ') : '(no days)'
+    return `${freq}, on the ${days}`
   }
   if (r.mode === 'after') return `${r.afterN} ${r.afterUnit} after marked complete`
   if (r.mode === 'custom') return r.customDate ? `Next due: ${r.customDate}` : 'Custom date'

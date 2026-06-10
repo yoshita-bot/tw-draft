@@ -131,7 +131,7 @@ function RepeatModal({ value, onClose, onSave }: {
     if (p === 'none')    { setForceCustom(false); setDraft(d => ({ ...d, enabled: false })); return }
     if (p === 'daily')   { setForceCustom(false); setDraft(d => ({ ...d, enabled: true, mode: 'daily',   dailyEvery: 1,   dailyUnit: 'days' })); return }
     if (p === 'weekly')  { setForceCustom(false); setDraft(d => ({ ...d, enabled: true, mode: 'weekly',  weeklyEvery: 1,  weekDays: [dow] })); return }
-    if (p === 'monthly') { setForceCustom(false); setDraft(d => ({ ...d, enabled: true, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDay: dom })); return }
+    if (p === 'monthly') { setForceCustom(false); setDraft(d => ({ ...d, enabled: true, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDays: [dom] })); return }
     setForceCustom(true)
     setDraft(d => ({ ...d, enabled: true }))
   }
@@ -144,6 +144,13 @@ function RepeatModal({ value, onClose, onSave }: {
     setDraft(d => {
       const days = d.weekDays.includes(i) ? d.weekDays.filter(x => x !== i) : [...d.weekDays, i].sort((a,b)=>a-b)
       return { ...d, weekDays: days }
+    })
+  }
+
+  function toggleMonthDay(d: number) {
+    setDraft(prev => {
+      const days = prev.monthDays.includes(d) ? prev.monthDays.filter(x => x !== d) : [...prev.monthDays, d].sort((a,b)=>a-b)
+      return { ...prev, monthDays: days }
     })
   }
 
@@ -196,7 +203,7 @@ function RepeatModal({ value, onClose, onSave }: {
                         const u = e.target.value
                         if (u === 'day')   setDraft(d => ({ ...d, mode: 'daily',   dailyEvery: 1,   dailyUnit: 'days' }))
                         if (u === 'week')  setDraft(d => ({ ...d, mode: 'weekly',  weeklyEvery: 1,  weekDays: d.weekDays.length ? d.weekDays : [dow] }))
-                        if (u === 'month') setDraft(d => ({ ...d, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDay: dom }))
+                        if (u === 'month') setDraft(d => ({ ...d, mode: 'monthly', monthlyEvery: 1, monthType: 'date', monthDays: [dom] }))
                       }}
                       style={sb}>
                       <option value="day">day(s)</option>
@@ -234,15 +241,21 @@ function RepeatModal({ value, onClose, onSave }: {
                 <div>
                   <label style={{ fontSize: 11, fontWeight: 600, color: '#8C8FA3', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: 8 }}>On</label>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {(['date', 'weekday', 'last'] as const).map(t => (
-                      <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 10, fontSize: 13.5, cursor: 'pointer', color: '#1F2328' }}>
-                        <input type="radio" name="mtype-modal" checked={draft.monthType === t} onChange={() => set('monthType', t)}
-                          style={{ width: 16, height: 16, accentColor: '#1D9E75', flexShrink: 0 }} />
-                        {t === 'date'    && `Day ${draft.monthDay} of the month`}
-                        {t === 'weekday' && `${['1st','2nd','3rd','4th'][draft.monthOrd-1]} ${WD_FULL[draft.monthWd]}`}
-                        {t === 'last'    && 'Last day of month'}
-                      </label>
-                    ))}
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+                      {Array.from({ length: 31 }, (_, i) => {
+                        const day = i + 1
+                        const on = draft.monthDays.includes(day)
+                        return (
+                          <button key={day} type="button" onClick={() => toggleMonthDay(day)} style={{
+                            width: 34, height: 30, borderRadius: 6,
+                            border: `1px solid ${on ? '#1D9E75' : '#D0D7DE'}`,
+                            background: on ? '#1D9E75' : '#fff',
+                            color: on ? '#fff' : '#57606A',
+                            fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit',
+                          }}>{day}</button>
+                        )
+                      })}
+                    </div>
                   </div>
                 </div>
               )}

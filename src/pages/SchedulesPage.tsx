@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import {
   Globe, Users, Calendar, CalendarDays,
   ChevronLeft, ChevronRight, Search, X, ChevronDown, ChevronUp,
-  Plus, Pencil, Trash2, Clock, CheckCircle2,
+  Plus, Pencil, Trash2, Clock, CheckCircle2, FileText, Upload, RefreshCw,
 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import {
@@ -1615,6 +1615,444 @@ const inputStyle: React.CSSProperties = {
   background: '#fff',
 }
 
+// ── Request Schedule Change Modal ─────────────────────────────────────────────
+
+type ChangeCategory = 'permanent' | 'day-swap' | 'time-adjust' | 'partial'
+
+const CHANGE_CATEGORIES: { key: ChangeCategory; label: string; sub: string }[] = [
+  { key: 'permanent',   label: 'Permanent change',  sub: 'New recurring schedule from a date forward' },
+  { key: 'day-swap',    label: 'Day swap',           sub: 'Skip one or more days, work on other days instead' },
+  { key: 'time-adjust', label: 'Different hours',    sub: 'Work the same days but at different times' },
+  { key: 'partial',     label: 'Partial shift',      sub: 'Shorter day — optionally compensate on another day' },
+]
+
+interface SwapPair   { fromDate: string; toDate: string; start: string; end: string }
+interface AdjustDay  { date: string; start: string; end: string }
+
+function TimeRange({ start, end, onStart, onEnd, label }: {
+  start: string; end: string
+  onStart: (v: string) => void; onEnd: (v: string) => void
+  label?: string
+}) {
+  const dur = durationLabel(start, end)
+  return (
+    <div>
+      {label && <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>{label}</div>}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <input type="time" value={start} onChange={e => onStart(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+        <span style={{ color: '#9CA3AF', fontSize: 13, flexShrink: 0 }}>→</span>
+        <input type="time" value={end} onChange={e => onEnd(e.target.value)} style={{ ...inputStyle, flex: 1 }} />
+        {dur && <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, background: '#F3F4F6', padding: '3px 8px', borderRadius: 5, flexShrink: 0 }}>{dur}</span>}
+      </div>
+    </div>
+  )
+}
+
+function RequestScheduleChangeModal({ employees, tz, onClose }: {
+  employees: Employee[]
+  tz: TZKey
+  onClose: () => void
+}) {
+  const [category,      setCategory]      = useState<ChangeCategory>('time-adjust')
+  const [empId,         setEmpId]         = useState('')
+
+  // — Permanent —
+  const [effectiveDate, setEffectiveDate] = useState('')
+  const [permDays,      setPermDays]      = useState<Partial<Record<DayOfWeek, DraftDaySchedule>>>(
+    { 1: { startDisplay: '09:00', endDisplay: '17:00' }, 2: { startDisplay: '09:00', endDisplay: '17:00' },
+      3: { startDisplay: '09:00', endDisplay: '17:00' }, 4: { startDisplay: '09:00', endDisplay: '17:00' },
+      5: { startDisplay: '09:00', endDisplay: '17:00' } }
+  )
+
+  // — Day swap (multi-pair) —
+  const [swaps, setSwaps] = useState<SwapPair[]>([{ fromDate: '', toDate: '', start: '09:00', end: '17:00' }])
+
+  function addSwap()              { setSwaps(s => [...s, { fromDate: '', toDate: '', start: '09:00', end: '17:00' }]) }
+  function removeSwap(i: number)  { setSwaps(s => s.filter((_, j) => j !== i)) }
+  function updateSwap<K extends keyof SwapPair>(i: number, k: K, v: SwapPair[K]) {
+    setSwaps(s => s.map((p, j) => j === i ? { ...p, [k]: v } : p))
+  }
+
+  // — Different hours (multi-day) —
+  const [adjustDays, setAdjustDays] = useState<AdjustDay[]>([{ date: '', start: '09:00', end: '17:00' }])
+
+  function addAdjustDay()              { setAdjustDays(a => [...a, { date: '', start: '09:00', end: '17:00' }]) }
+  function removeAdjustDay(i: number)  { setAdjustDays(a => a.filter((_, j) => j !== i)) }
+  function updateAdjustDay<K extends keyof AdjustDay>(i: number, k: K, v: AdjustDay[K]) {
+    setAdjustDays(a => a.map((d, j) => j === i ? { ...d, [k]: v } : d))
+  }
+
+  // — Partial shift —
+  const [partialDate,  setPartialDate]  = useState('')
+  const [partialStart, setPartialStart] = useState('09:00')
+  const [partialEnd,   setPartialEnd]   = useState('13:00')
+  const [compensate,   setCompensate]   = useState(false)
+  const [compDate,     setCompDate]     = useState('')
+  const [compStart,    setCompStart]    = useState('09:00')
+  const [compEnd,      setCompEnd]      = useState('17:00')
+
+  // — Shared —
+  const [note,      setNote]      = useState('')
+  const [files,     setFiles]     = useState<File[]>([])
+  const [submitted, setSubmitted] = useState(false)
+  const [dragOver,  setDragOver]  = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const backdropRef  = useRef<HTMLDivElement>(null)
+
+  const selectedEmp = employees.find(e => e.id === empId) ?? null
+
+  const canSubmit = !!empId && note.trim().length >= 5 && files.length > 0 && (() => {
+    if (category === 'permanent')   return !!effectiveDate && Object.keys(permDays).length > 0
+    if (category === 'day-swap')    return swaps.every(s => s.fromDate && s.toDate)
+    if (category === 'time-adjust') return adjustDays.every(d => d.date)
+    if (category === 'partial')     return !!partialDate && (!compensate || !!compDate)
+    return false
+  })()
+
+  function handleFiles(incoming: FileList | null) {
+    if (!incoming) return
+    setFiles(prev => {
+      const names = new Set(prev.map(f => f.name))
+      return [...prev, ...Array.from(incoming).filter(f => !names.has(f.name))]
+    })
+  }
+  function removeFile(i: number) { setFiles(prev => prev.filter((_, j) => j !== i)) }
+
+  function fmtFileSize(bytes: number): string {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  function handleSubmit() {
+    if (!canSubmit) return
+    setSubmitted(true)
+    setTimeout(onClose, 1400)
+  }
+
+  const tzLabel = tz === 'EST' ? 'EST' : tz === 'PH' ? 'PH Time' : 'Local'
+
+  return (
+    <div
+      ref={backdropRef}
+      onClick={e => { if (e.target === backdropRef.current) onClose() }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.38)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <div style={{
+        width: 540, maxHeight: '92vh', background: '#fff', borderRadius: 16,
+        boxShadow: '0 20px 60px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        animation: 'fadeScaleIn 0.18s ease',
+      }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexShrink: 0 }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <div style={{ width: 32, height: 32, borderRadius: 8, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <RefreshCw size={16} color="#6C63FF" />
+              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Request Schedule Change</div>
+            </div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 4, marginLeft: 40 }}>
+              Client approval documentation is required for all requests.
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', padding: 4, flexShrink: 0 }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+          {/* Employee */}
+          <Field label="Employee">
+            <select value={empId} onChange={e => setEmpId(e.target.value)} style={inputStyle}>
+              <option value="">Select an employee…</option>
+              {employees.map(e => (
+                <option key={e.id} value={e.id}>{e.name} — {CLIENT_MAP[e.clientId]?.shortName} · {e.role}</option>
+              ))}
+            </select>
+            {selectedEmp && (
+              <div style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', background: '#F9FAFB', borderRadius: 8, border: '1px solid #F3F4F6' }}>
+                <Avatar e={selectedEmp} size={30} />
+                <div>
+                  <div style={{ fontSize: 12.5, fontWeight: 600, color: '#111827' }}>{selectedEmp.name}</div>
+                  <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>{selectedEmp.role} · {CLIENT_MAP[selectedEmp.clientId]?.name}</div>
+                </div>
+                <div style={{ marginLeft: 'auto' }}>
+                  <span style={{ fontSize: 10.5, fontWeight: 600, padding: '2px 7px', borderRadius: 4, background: '#F3F4F6', color: '#6B7280' }}>
+                    {SCHEDULE_TYPE_LABELS[selectedEmp.scheduleType]}
+                  </span>
+                </div>
+              </div>
+            )}
+          </Field>
+
+          {/* Change type */}
+          <Field label="Type of change">
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+              {CHANGE_CATEGORIES.map(c => (
+                <button
+                  key={c.key}
+                  onClick={() => setCategory(c.key)}
+                  style={{
+                    padding: '10px 12px', border: `1.5px solid ${category === c.key ? '#6C63FF' : '#E5E7EB'}`,
+                    borderRadius: 9, cursor: 'pointer', textAlign: 'left',
+                    background: category === c.key ? '#F5F3FF' : '#fff', transition: 'all 0.12s',
+                  }}
+                >
+                  <div style={{ fontSize: 12.5, fontWeight: 700, color: category === c.key ? '#4338CA' : '#374151', marginBottom: 2 }}>{c.label}</div>
+                  <div style={{ fontSize: 11, color: '#9CA3AF', lineHeight: 1.4 }}>{c.sub}</div>
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {/* ── Permanent ── */}
+          {category === 'permanent' && (<>
+            <Field label="Effective from">
+              <input type="date" value={effectiveDate} onChange={e => setEffectiveDate(e.target.value)} style={inputStyle} />
+            </Field>
+            <Field label={`New recurring schedule (${tzLabel})`}>
+              <WorkDaysEditor workDays={permDays} tz={tz} onChange={setPermDays} />
+            </Field>
+          </>)}
+
+          {/* ── Day swap (multi-pair) ── */}
+          {category === 'day-swap' && (
+            <Field label="Swap pairs">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {swaps.map((s, i) => (
+                  <div key={i} style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Swap {i + 1}
+                      </span>
+                      {swaps.length > 1 && (
+                        <button onClick={() => removeSwap(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', display: 'flex', padding: 2 }}>
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'end' }}>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Skip (original shift)</div>
+                        <input type="date" value={s.fromDate} onChange={e => updateSwap(i, 'fromDate', e.target.value)} style={inputStyle} />
+                      </div>
+                      <div style={{ paddingBottom: 8, color: '#9CA3AF', fontSize: 16 }}>→</div>
+                      <div>
+                        <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Work instead on</div>
+                        <input type="date" value={s.toDate} onChange={e => updateSwap(i, 'toDate', e.target.value)} style={inputStyle} />
+                      </div>
+                    </div>
+
+                    <TimeRange
+                      label="Hours on replacement day"
+                      start={s.start} end={s.end}
+                      onStart={v => updateSwap(i, 'start', v)}
+                      onEnd={v => updateSwap(i, 'end', v)}
+                    />
+                  </div>
+                ))}
+
+                <button
+                  onClick={addSwap}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1.5px dashed #D1D5DB', borderRadius: 8, background: 'none', cursor: 'pointer', fontSize: 12.5, color: '#6B7280', justifyContent: 'center' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#6C63FF'; e.currentTarget.style.color = '#6C63FF' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280' }}
+                >
+                  <Plus size={13} /> Add another swap
+                </button>
+              </div>
+            </Field>
+          )}
+
+          {/* ── Different hours (multi-day) ── */}
+          {category === 'time-adjust' && (
+            <Field label="Days with different hours">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {adjustDays.map((d, i) => (
+                  <div key={i} style={{ background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                        Day {i + 1}
+                      </span>
+                      {adjustDays.length > 1 && (
+                        <button onClick={() => removeAdjustDay(i)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#EF4444', display: 'flex', padding: 2 }}>
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Date</div>
+                      <input type="date" value={d.date} onChange={e => updateAdjustDay(i, 'date', e.target.value)} style={inputStyle} />
+                    </div>
+                    <TimeRange
+                      label="New hours for this day"
+                      start={d.start} end={d.end}
+                      onStart={v => updateAdjustDay(i, 'start', v)}
+                      onEnd={v => updateAdjustDay(i, 'end', v)}
+                    />
+                  </div>
+                ))}
+
+                <button
+                  onClick={addAdjustDay}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px', border: '1.5px dashed #D1D5DB', borderRadius: 8, background: 'none', cursor: 'pointer', fontSize: 12.5, color: '#6B7280', justifyContent: 'center' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#6C63FF'; e.currentTarget.style.color = '#6C63FF' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#6B7280' }}
+                >
+                  <Plus size={13} /> Add another day
+                </button>
+              </div>
+            </Field>
+          )}
+
+          {/* ── Partial shift ── */}
+          {category === 'partial' && (<>
+            <Field label="Partial shift day">
+              <input type="date" value={partialDate} onChange={e => setPartialDate(e.target.value)} style={inputStyle} />
+            </Field>
+            <Field label="Hours actually worked">
+              <TimeRange
+                start={partialStart} end={partialEnd}
+                onStart={setPartialStart} onEnd={setPartialEnd}
+              />
+              <div style={{ marginTop: 6, fontSize: 11, color: '#9CA3AF' }}>
+                Set only the window you will work — e.g. 09:00–13:00 if leaving mid-day.
+              </div>
+            </Field>
+
+            {/* Compensation toggle */}
+            <div style={{ background: compensate ? '#F5F3FF' : '#F9FAFB', border: `1px solid ${compensate ? '#C4B5FD' : '#E5E7EB'}`, borderRadius: 10, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 12, transition: 'all 0.15s' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={compensate}
+                  onChange={e => setCompensate(e.target.checked)}
+                  style={{ accentColor: '#6C63FF', width: 14, height: 14, flexShrink: 0 }}
+                />
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: compensate ? '#4338CA' : '#374151' }}>
+                    Compensate remaining hours on another day
+                  </div>
+                  <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>
+                    Specify a make-up day for the hours not worked.
+                  </div>
+                </div>
+              </label>
+
+              {compensate && (
+                <>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#6B7280', fontWeight: 600, marginBottom: 4 }}>Compensation date</div>
+                    <input type="date" value={compDate} onChange={e => setCompDate(e.target.value)} style={inputStyle} />
+                  </div>
+                  <TimeRange
+                    label="Hours on compensation day"
+                    start={compStart} end={compEnd}
+                    onStart={setCompStart} onEnd={setCompEnd}
+                  />
+                </>
+              )}
+            </div>
+          </>)}
+
+          {/* Note — mandatory */}
+          <Field label="Note / reason *">
+            <textarea
+              value={note}
+              onChange={e => setNote(e.target.value)}
+              placeholder={
+                category === 'permanent'   ? 'Explain the reason for the permanent schedule change…' :
+                category === 'day-swap'    ? 'e.g. National holiday on Thursday, compensating on Saturday…' :
+                category === 'partial'     ? 'e.g. Doctor appointment in the afternoon, will leave at 1pm…' :
+                'e.g. Client asked to shift the sync 2 hours earlier on those days…'
+              }
+              rows={3}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: 'inherit', minHeight: 72 }}
+            />
+            {note.trim().length > 0 && note.trim().length < 5 && (
+              <div style={{ fontSize: 11, color: '#EF4444', marginTop: 4 }}>Note must be at least 5 characters.</div>
+            )}
+          </Field>
+
+          {/* File upload — mandatory */}
+          <Field label="Client approval document *">
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={e => { e.preventDefault(); setDragOver(true) }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={e => { e.preventDefault(); setDragOver(false); handleFiles(e.dataTransfer.files) }}
+              style={{
+                border: `2px dashed ${dragOver ? '#6C63FF' : files.length ? '#059669' : '#D1D5DB'}`,
+                borderRadius: 10, padding: '18px 16px', cursor: 'pointer', textAlign: 'center',
+                background: dragOver ? '#F5F3FF' : files.length ? '#F0FDF4' : '#FAFAFA',
+                transition: 'all 0.15s',
+              }}
+            >
+              <Upload size={20} color={files.length ? '#059669' : '#9CA3AF'} style={{ margin: '0 auto 6px' }} />
+              <div style={{ fontSize: 13, fontWeight: 600, color: files.length ? '#065F46' : '#374151' }}>
+                {files.length ? `${files.length} file${files.length > 1 ? 's' : ''} attached` : 'Upload approval document'}
+              </div>
+              <div style={{ fontSize: 11.5, color: '#9CA3AF', marginTop: 3 }}>
+                Drag & drop or click to browse · PDF, image, or doc
+              </div>
+            </div>
+            <input ref={fileInputRef} type="file" multiple accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.webp,.heic"
+              onChange={e => handleFiles(e.target.files)} style={{ display: 'none' }} />
+
+            {files.length > 0 && (
+              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                {files.map((f, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: '#F0FDF4', border: '1px solid #A7F3D0', borderRadius: 7 }}>
+                    <FileText size={14} color="#059669" style={{ flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, color: '#065F46', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>{f.name}</span>
+                    <span style={{ fontSize: 11, color: '#6B7280', flexShrink: 0 }}>{fmtFileSize(f.size)}</span>
+                    <button onClick={e => { e.stopPropagation(); removeFile(i) }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', padding: 2, flexShrink: 0 }}>
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ marginTop: 6, fontSize: 11, color: '#9CA3AF' }}>
+              Required — attach client approval email, screenshot, or signed document.
+            </div>
+          </Field>
+
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #F3F4F6', display: 'flex', gap: 10, flexShrink: 0 }}>
+          <button onClick={onClose}
+            style={{ flex: 1, padding: '9px 0', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#6B7280' }}>
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || submitted}
+            style={{
+              flex: 2, padding: '9px 0', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 700, cursor: canSubmit && !submitted ? 'pointer' : 'default',
+              background: submitted ? '#059669' : !canSubmit ? '#E5E7EB' : '#6C63FF',
+              color: !canSubmit ? '#9CA3AF' : '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              transition: 'background 0.2s',
+            }}
+          >
+            {submitted ? <><CheckCircle2 size={15} /> Request submitted!</> : <><RefreshCw size={14} /> Submit Request</>}
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.96) } to { opacity: 1; transform: scale(1) } }`}</style>
+    </div>
+  )
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export function SchedulesPage() {
@@ -1628,6 +2066,7 @@ export function SchedulesPage() {
   const [employees,   setEmployees]   = useState<Employee[]>(EMPLOYEES)
   const [modal,       setModal]       = useState<ModalState>({ emp: null, open: false })
   const [detailEmp,   setDetailEmp]   = useState<Employee | null>(null)
+  const [reqModalOpen, setReqModalOpen] = useState(false)
 
   const localTzName = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -1781,6 +2220,14 @@ export function SchedulesPage() {
             </select>
           </div>
 
+          {/* Request schedule change */}
+          <button
+            onClick={() => setReqModalOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', height: 34, border: '1.5px solid #6C63FF', borderRadius: 8, background: '#fff', color: '#6C63FF', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+          >
+            <RefreshCw size={14} /> Request Change
+          </button>
+
           {/* Add schedule */}
           <button
             onClick={() => setModal({ emp: null, open: true })}
@@ -1898,6 +2345,15 @@ export function SchedulesPage() {
           onSave={handleSave}
           onClose={() => setModal({ emp: null, open: false })}
           onAddMove={handleAddShiftMove}
+        />
+      )}
+
+      {/* Request schedule change modal */}
+      {reqModalOpen && (
+        <RequestScheduleChangeModal
+          employees={employees}
+          tz={tz}
+          onClose={() => setReqModalOpen(false)}
         />
       )}
     </div>
