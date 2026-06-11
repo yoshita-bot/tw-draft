@@ -5,7 +5,6 @@
 
 export const ROUTES = {
   dashboard:            '/dashboard',
-  favourites:           '/favourites',
   timesheets:           '/timesheets',
   activity:             '/activity',
   activityScreenshots:  '/activity/screenshots',

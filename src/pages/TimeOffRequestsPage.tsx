@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react'
 import {
   Plus, Search, SlidersHorizontal, ChevronDown, X, Check,
   Calendar, Clock, Users, DollarSign, AlertTriangle, CalendarDays,
-  Settings, ChevronRight, User, Shield, Info,
+  Settings, ChevronRight, User, Shield, Info, Trash2, ArrowRight,
 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 
@@ -211,11 +211,12 @@ function IconBtn({ children, onClick, title, active }: { children: React.ReactNo
 //  REQUEST DETAIL MODAL
 // ─────────────────────────────────────────────────────────────
 
-function RequestDetailModal({ req, onClose, onApprove, onDeny }: {
+function RequestDetailModal({ req, onClose, onApprove, onDeny, onAdjustSchedule }: {
   req: PtoRequest
   onClose: () => void
   onApprove: (id: string) => void
   onDeny: (id: string) => void
+  onAdjustSchedule: (req: PtoRequest) => void
 }) {
   const policy = POLICIES.find(p => p.id === req.policyId)!
   const worker = WORKERS.find(w => w.id === req.workerId)!
@@ -231,6 +232,7 @@ function RequestDetailModal({ req, onClose, onApprove, onDeny }: {
     dateCells.push({ date: cur, scheduled: !!shift, shift: shift?.label })
     cur = addDays(cur, 1)
   }
+  const hasScheduledShift = req.isScheduled || dateCells.some(d => d.scheduled)
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
@@ -323,21 +325,31 @@ function RequestDetailModal({ req, onClose, onApprove, onDeny }: {
         </div>
 
         {/* Footer actions */}
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 18px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280', fontWeight: 500 }}>Close</button>
-          {req.status === 'pending' && (
-            <>
-              <button onClick={() => { onDeny(req.id); onClose() }}
-                style={{ padding: '8px 18px', border: '1px solid #FCA5A5', borderRadius: 8, background: '#FEF2F2', cursor: 'pointer', fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
-                Deny
-              </button>
+        {req.status === 'pending' && (
+          <div style={{ padding: '14px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <button onClick={() => { onDeny(req.id); onClose() }}
+              style={{ padding: '8px 18px', border: '1px solid #FCA5A5', borderRadius: 8, background: '#FEF2F2', cursor: 'pointer', fontSize: 13, color: '#DC2626', fontWeight: 600 }}>
+              Deny
+            </button>
+            {hasScheduledShift ? (
+              <>
+                <button onClick={() => { onApprove(req.id); onClose() }}
+                  style={{ padding: '8px 18px', border: '1px solid #6EE7B7', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#059669', fontWeight: 600 }}>
+                  Approve only
+                </button>
+                <button onClick={() => { onApprove(req.id); onClose(); onAdjustSchedule(req) }}
+                  style={{ padding: '8px 18px', border: 'none', borderRadius: 8, background: '#059669', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Calendar width={13} height={13} /> Approve & adjust schedule
+                </button>
+              </>
+            ) : (
               <button onClick={() => { onApprove(req.id); onClose() }}
                 style={{ padding: '8px 22px', border: 'none', borderRadius: 8, background: '#059669', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>
                 Approve
               </button>
-            </>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -776,57 +788,271 @@ function PolicyField({ label, value }: { label: string; value: string }) {
 }
 
 // ─────────────────────────────────────────────────────────────
-//  QUICK SCHEDULE ADJUST MODAL
+//  ADJUST SCHEDULE MODAL
+//  Reschedule the hours of an approved/pending time-off as
+//  make-up shifts: any date (same day, new day, weekend),
+//  any time, split across as many blocks as needed.
 // ─────────────────────────────────────────────────────────────
 
-function QuickScheduleModal({ req, onClose }: { req: PtoRequest; onClose: () => void }) {
-  const [action, setAction] = useState<'swap' | 'dayoff'>('dayoff')
-  const [swapDate, setSwapDate] = useState('')
-  const [note, setNote] = useState('')
+interface MakeupBlock {
+  id: number
+  date: string
+  start: string  // HH:MM
+  end: string    // HH:MM
+}
 
-  const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
+function timeToMin(t: string) {
+  if (!t) return null
+  const [h, m] = t.split(':').map(Number)
+  return h * 60 + m
+}
+function blockHours(b: MakeupBlock) {
+  const s = timeToMin(b.start), e = timeToMin(b.end)
+  if (s === null || e === null || e <= s) return 0
+  return (e - s) / 60
+}
+function fmtHrs(h: number) {
+  return Number.isInteger(h) ? `${h}h` : `${h.toFixed(1)}h`
+}
+function fmtTime12(t: string) {
+  const m = timeToMin(t)
+  if (m === null) return ''
+  const h = Math.floor(m / 60), min = m % 60
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  return min === 0 ? `${h12}${ampm}` : `${h12}:${String(min).padStart(2, '0')}${ampm}`
+}
+function dayLabel(ds: string) {
+  return parseUTC(ds).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
+}
+
+function AdjustScheduleModal({ req, onClose }: { req: PtoRequest; onClose: () => void }) {
+  const [mode, setMode] = useState<'makeup' | 'remove'>('makeup')
+  const [note, setNote] = useState('')
+  const [blocks, setBlocks] = useState<MakeupBlock[]>([
+    { id: 1, date: addDays(req.endDate, 1), start: '09:00', end: '17:00' },
+  ])
+  const nextId = React.useRef(2)
+
+  // Days being taken off, with the worker's original shift if we have one
+  const offDays = useMemo(() => {
+    const out: { date: string; shift?: string }[] = []
+    let cur = req.startDate
+    while (cur <= req.endDate) {
+      if (!isWeekend(cur)) {
+        const shift = SHIFT_DAYS.find(s => s.date === cur && s.workerId === req.workerId)
+        out.push({ date: cur, shift: shift?.label })
+      }
+      cur = addDays(cur, 1)
+    }
+    return out
+  }, [req])
+
+  const targetHours = req.days * req.hoursPerDay
+  const coveredHours = blocks.reduce((sum, b) => sum + blockHours(b), 0)
+  const remaining = targetHours - coveredHours
+  const inOffRange = (d: string) => d >= req.startDate && d <= req.endDate
+
+  // Per-block validation
+  const blockIssues = blocks.map(b => {
+    if (!b.date) return 'Pick a date'
+    const s = timeToMin(b.start), e = timeToMin(b.end)
+    if (s === null || e === null) return 'Set start and end time'
+    if (e <= s) return 'End time must be after start'
+    return null
+  })
+
+  // Per-day totals across blocks (catch >8h stacking on one day)
+  const dayTotals = blocks.reduce<Record<string, number>>((acc, b) => {
+    if (b.date) acc[b.date] = (acc[b.date] ?? 0) + blockHours(b)
+    return acc
+  }, {})
+  const overloadedDays = Object.entries(dayTotals).filter(([, h]) => h > 8)
+
+  // Existing shifts colliding with make-up days (outside the off range —
+  // inside the range the original shift is being removed anyway)
+  const collisions = blocks.filter(b =>
+    b.date && !inOffRange(b.date) &&
+    SHIFT_DAYS.some(s => s.workerId === req.workerId && s.date === b.date)
+  )
+
+  const blocksValid = blockIssues.every(i => i === null)
+  const canApply = mode === 'remove' || (blocks.length > 0 && blocksValid && coveredHours > 0)
+
+  function updateBlock(id: number, patch: Partial<MakeupBlock>) {
+    setBlocks(prev => prev.map(b => b.id === id ? { ...b, ...patch } : b))
+  }
+  function addBlock() {
+    const last = blocks[blocks.length - 1]
+    setBlocks(prev => [...prev, {
+      id: nextId.current++,
+      date: last?.date ? addDays(last.date, 1) : addDays(req.endDate, 1),
+      start: last?.start || '09:00',
+      end: last?.end || '17:00',
+    }])
+  }
+  function removeBlock(id: number) {
+    setBlocks(prev => prev.filter(b => b.id !== id))
+  }
+
+  const inp: React.CSSProperties = { padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 }
+
+  const coverageColor = remaining > 0 ? '#D97706' : remaining < 0 ? '#DC2626' : '#059669'
+  const coveragePct = Math.min(100, targetHours > 0 ? (coveredHours / targetHours) * 100 : 0)
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 310, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 440, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 580, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+
+        {/* Header */}
         <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #F0F0F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Quick Schedule Adjustment</div>
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{req.workerName} · {fmtDateShort(req.startDate)}{req.startDate !== req.endDate ? ` – ${fmtDateShort(req.endDate)}` : ''}</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Adjust Schedule</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{req.workerName} · {fmtDateShort(req.startDate)}{req.startDate !== req.endDate ? ` – ${fmtDateShort(req.endDate)}` : ''} · {fmtHrs(targetHours)} off</div>
           </div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 22, color: '#9CA3AF', lineHeight: 1, padding: 0 }}>×</button>
         </div>
+
         <div style={{ padding: '20px 24px' }}>
+
+          {/* Time being taken off */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={lbl}>Time off to cover</label>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {offDays.map(d => (
+                <div key={d.date} style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #FDE68A', background: '#FFFBEB', minWidth: 104 }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: '#374151' }}>{dayLabel(d.date)}</div>
+                  <div style={{ fontSize: 11, color: '#D97706', marginTop: 2 }}>{d.shift ?? `${fmtHrs(req.hoursPerDay)} shift`}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Mode toggle */}
           <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
-            {(['dayoff', 'swap'] as const).map(a => (
-              <button key={a} onClick={() => setAction(a)} style={{ flex: 1, padding: '9px 12px', border: `1.5px solid ${action === a ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 8, background: action === a ? '#F5F3FF' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: action === a ? '#6C63FF' : '#6B7280' }}>
-                {a === 'dayoff' ? 'Mark day off' : 'Swap shift day'}
+            {([['makeup', 'Make up the hours'], ['remove', 'Remove shifts only']] as const).map(([m, label]) => (
+              <button key={m} onClick={() => setMode(m)} style={{ flex: 1, padding: '9px 12px', border: `1.5px solid ${mode === m ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 8, background: mode === m ? '#F5F3FF' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: mode === m ? '#6C63FF' : '#6B7280', fontFamily: 'inherit' }}>
+                {label}
               </button>
             ))}
           </div>
 
-          {action === 'dayoff' ? (
-            <div style={{ padding: '10px 14px', background: '#F0FDF4', borderRadius: 8, fontSize: 13, color: '#059669', marginBottom: 14 }}>
-              Worker's scheduled shift on {fmtDateShort(req.startDate)}{req.startDate !== req.endDate ? ` – ${fmtDateShort(req.endDate)}` : ''} will be removed without requiring a formal PTO workflow.
+          {mode === 'remove' ? (
+            <div style={{ padding: '10px 14px', background: '#F0FDF4', borderRadius: 8, fontSize: 13, color: '#059669', marginBottom: 16 }}>
+              Scheduled shifts on the requested days will be removed and the {fmtHrs(targetHours)} will be drawn from the worker's PTO balance. No make-up time is scheduled.
             </div>
           ) : (
-            <div style={{ marginBottom: 14 }}>
-              <label style={lbl}>Move shift to</label>
-              <input type="date" value={swapDate} onChange={e => setSwapDate(e.target.value)} style={inp} />
-              <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 6 }}>Worker will work on this day instead of the requested dates.</div>
-            </div>
+            <>
+              {/* Make-up shift builder */}
+              <div style={{ marginBottom: 12 }}>
+                <label style={lbl}>Make-up shifts</label>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {blocks.map((b, i) => {
+                    const hrs = blockHours(b)
+                    const issue = blockIssues[i]
+                    const sameDay = b.date && inOffRange(b.date)
+                    const weekend = b.date && isWeekend(b.date)
+                    return (
+                      <div key={b.id} style={{ border: `1px solid ${issue ? '#FCA5A5' : '#E5E7EB'}`, borderRadius: 9, padding: '10px 12px', background: '#FAFAFA' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <input type="date" value={b.date} onChange={e => updateBlock(b.id, { date: e.target.value })} style={{ ...inp, flex: '1 1 140px' }} />
+                          <input type="time" value={b.start} onChange={e => updateBlock(b.id, { start: e.target.value })} style={{ ...inp, width: 102 }} />
+                          <ArrowRight width={13} height={13} style={{ color: '#9CA3AF', flexShrink: 0 }} />
+                          <input type="time" value={b.end} onChange={e => updateBlock(b.id, { end: e.target.value })} style={{ ...inp, width: 102 }} />
+                          <div style={{ fontSize: 12.5, fontWeight: 700, color: hrs > 0 ? '#6C63FF' : '#D1D5DB', width: 38, textAlign: 'right', flexShrink: 0 }}>{hrs > 0 ? fmtHrs(hrs) : '—'}</div>
+                          <button onClick={() => removeBlock(b.id)} title="Remove" disabled={blocks.length === 1}
+                            style={{ border: 'none', background: 'none', cursor: blocks.length === 1 ? 'not-allowed' : 'pointer', color: blocks.length === 1 ? '#E5E7EB' : '#9CA3AF', padding: 4, display: 'flex', flexShrink: 0 }}>
+                            <Trash2 width={14} height={14} />
+                          </button>
+                        </div>
+                        {(issue || sameDay || weekend) && (
+                          <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                            {issue && <span style={{ fontSize: 11, color: '#DC2626', fontWeight: 500 }}>{issue}</span>}
+                            {!issue && sameDay && (
+                              <span style={{ fontSize: 11, color: '#0EA5E9', fontWeight: 500 }}>
+                                Same day as time off — works {fmtTime12(b.start)}–{fmtTime12(b.end)} instead of the original shift
+                              </span>
+                            )}
+                            {!issue && weekend && !sameDay && (
+                              <span style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 500 }}>{dayLabel(b.date)} is a weekend</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+                <button onClick={addBlock}
+                  style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', border: '1px dashed #C7C3FF', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: '#6C63FF', fontFamily: 'inherit' }}>
+                  <Plus width={13} height={13} /> Add another shift
+                </button>
+              </div>
+
+              {/* Coverage tracker */}
+              <div style={{ padding: '12px 14px', background: '#F9FAFB', border: '1px solid #F0F0F0', borderRadius: 9, marginBottom: 14 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 7 }}>
+                  <span style={{ fontSize: 12.5, color: '#374151' }}>
+                    Scheduled <strong style={{ color: coverageColor }}>{fmtHrs(coveredHours)}</strong> of <strong>{fmtHrs(targetHours)}</strong>
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: coverageColor }}>
+                    {remaining > 0 ? `${fmtHrs(remaining)} short` : remaining < 0 ? `${fmtHrs(-remaining)} over` : 'Fully covered'}
+                  </span>
+                </div>
+                <div style={{ height: 6, background: '#E5E7EB', borderRadius: 99, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${coveragePct}%`, background: coverageColor, borderRadius: 99, transition: 'width 0.15s, background 0.15s' }} />
+                </div>
+                {remaining > 0 && coveredHours > 0 && (
+                  <div style={{ fontSize: 11.5, color: '#B45309', marginTop: 7 }}>
+                    The uncovered {fmtHrs(remaining)} will be drawn from the worker's PTO balance.
+                  </div>
+                )}
+                {remaining < 0 && (
+                  <div style={{ fontSize: 11.5, color: '#DC2626', marginTop: 7 }}>
+                    Make-up shifts exceed the time taken off — reduce hours or confirm overtime is intended.
+                  </div>
+                )}
+              </div>
+
+              {/* Warnings */}
+              {overloadedDays.length > 0 && (
+                <div style={{ padding: '9px 13px', background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, fontSize: 12, color: '#DC2626', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <AlertTriangle width={13} height={13} style={{ flexShrink: 0 }} />
+                  <span>Over 8h scheduled on {overloadedDays.map(([d, h]) => `${dayLabel(d)} (${fmtHrs(h)})`).join(', ')}.</span>
+                </div>
+              )}
+              {collisions.length > 0 && (
+                <div style={{ padding: '9px 13px', background: '#FFF7ED', border: '1px solid #FDE68A', borderRadius: 8, fontSize: 12, color: '#B45309', display: 'flex', alignItems: 'center', gap: 7, marginBottom: 10 }}>
+                  <AlertTriangle width={13} height={13} style={{ flexShrink: 0 }} />
+                  <span>
+                    {req.workerName.split(' ')[0]} already has a shift on {collisions.map(b => {
+                      const s = SHIFT_DAYS.find(sd => sd.workerId === req.workerId && sd.date === b.date)
+                      return `${dayLabel(b.date)}${s ? ` (${s.label})` : ''}`
+                    }).join(', ')} — make-up hours will stack on top.
+                  </span>
+                </div>
+              )}
+            </>
           )}
 
+          {/* Manager note */}
           <div>
             <label style={lbl}>Manager note</label>
-            <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Optional reason or instructions for the worker…" style={{ ...inp, resize: 'none' }} />
+            <textarea rows={2} value={note} onChange={e => setNote(e.target.value)} placeholder="Optional reason or instructions for the worker…" style={{ ...inp, width: '100%', resize: 'none' }} />
           </div>
         </div>
-        <div style={{ padding: '14px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 8, justifyContent: 'flex-end', alignItems: 'center' }}>
+          {mode === 'makeup' && canApply && (
+            <span style={{ fontSize: 12, color: '#9CA3AF', marginRight: 'auto' }}>
+              {blocks.length} make-up shift{blocks.length !== 1 ? 's' : ''} · {fmtHrs(coveredHours)} rescheduled
+            </span>
+          )}
           <button onClick={onClose} style={{ padding: '8px 18px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280', fontWeight: 500 }}>Cancel</button>
-          <button onClick={onClose} style={{ padding: '8px 22px', border: 'none', borderRadius: 8, background: '#6C63FF', cursor: 'pointer', fontSize: 13, color: '#fff', fontWeight: 600 }}>
+          <button onClick={onClose} disabled={!canApply}
+            style={{ padding: '8px 22px', border: 'none', borderRadius: 8, background: canApply ? '#6C63FF' : '#E5E7EB', cursor: canApply ? 'pointer' : 'not-allowed', fontSize: 13, color: canApply ? '#fff' : '#9CA3AF', fontWeight: 600 }}>
             Apply adjustment
           </button>
         </div>
@@ -1070,24 +1296,24 @@ export function TimeOffRequestsPage() {
                         </td>
                         <td style={td}><StatusBadge status={req.status} /></td>
                         <td style={{ ...td, color: '#9CA3AF', fontSize: 12 }}>{fmtDT(req.submittedAt)}</td>
-                        <td style={{ ...td, borderRight: 'none' }} onClick={e => e.stopPropagation()}>
-                          <div style={{ display: 'flex', gap: 6 }}>
+                        <td style={{ ...td, borderRight: 'none', width: 1, whiteSpace: 'nowrap' }} onClick={e => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: 5 }}>
                             {req.status === 'pending' && (
                               <>
                                 <button onClick={() => approve(req.id)} title="Approve"
-                                  style={{ padding: '5px 10px', border: 'none', borderRadius: 6, background: '#F0FDF4', color: '#059669', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <Check width={12} height={12} /> Approve
+                                  style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 6, background: '#F0FDF4', color: '#059669', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <Check width={14} height={14} />
                                 </button>
                                 <button onClick={() => deny(req.id)} title="Deny"
-                                  style={{ padding: '5px 10px', border: 'none', borderRadius: 6, background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                  <X width={12} height={12} /> Deny
+                                  style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 6, background: '#FEF2F2', color: '#DC2626', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <X width={14} height={14} />
                                 </button>
                               </>
                             )}
                             {req.isScheduled && (
-                              <button onClick={() => setQuickScheduleReq(req)} title="Quick schedule adjust"
-                                style={{ padding: '5px 10px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#FFF7ED', color: '#D97706', cursor: 'pointer', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                                <Calendar width={12} height={12} /> Adjust schedule
+                              <button onClick={() => setQuickScheduleReq(req)} title="Adjust schedule"
+                                style={{ width: 28, height: 28, padding: 0, border: '1px solid #FDE68A', borderRadius: 6, background: '#FFF7ED', color: '#D97706', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <Calendar width={14} height={14} />
                               </button>
                             )}
                           </div>
@@ -1111,10 +1337,10 @@ export function TimeOffRequestsPage() {
       </div>
 
       {selectedReq && (
-        <RequestDetailModal req={selectedReq} onClose={() => setSelectedReq(null)} onApprove={approve} onDeny={deny} />
+        <RequestDetailModal req={selectedReq} onClose={() => setSelectedReq(null)} onApprove={approve} onDeny={deny} onAdjustSchedule={r => setQuickScheduleReq(r)} />
       )}
       {quickScheduleReq && (
-        <QuickScheduleModal req={quickScheduleReq} onClose={() => setQuickScheduleReq(null)} />
+        <AdjustScheduleModal req={quickScheduleReq} onClose={() => setQuickScheduleReq(null)} />
       )}
       {showNewRequest && (
         <NewRequestModal existingRequests={requests} onClose={() => setShowNewRequest(false)} onSubmit={r => setRequests(p => [r, ...p])} />
