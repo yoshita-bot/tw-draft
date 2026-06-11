@@ -20,6 +20,11 @@ import { ClientProfilePage } from './pages/ClientProfilePage'
 import { TeamsPage } from './pages/TeamsPage'
 import { TeamDetailPage } from './pages/TeamDetailPage'
 import { PaymentsPage } from './pages/PaymentsPage'
+import { PastPaymentsPage } from './pages/PastPaymentsPage'
+import { DailyTotalPage } from './pages/DailyTotalPage'
+import { TimeEditsPage } from './pages/TimeEditsPage'
+import { WorkSessionsPage } from './pages/WorkSessionsPage'
+import { DeletedScreenshotsPage } from './pages/DeletedScreenshotsPage'
 import { ROUTES } from './lib/routes'
 
 const STUB_PATHS = [
@@ -42,6 +47,7 @@ export default function App() {
             <Route path={ROUTES.activity} element={<Navigate to={ROUTES.activityScreenshots} replace />} />
             <Route path={ROUTES.activityScreenshots} element={<ErrorBoundary><ActivityPage view="screenshots" /></ErrorBoundary>} />
             <Route path={ROUTES.activityApps}        element={<ErrorBoundary><ActivityPage view="apps" /></ErrorBoundary>} />
+            <Route path={ROUTES.activityDeleted}     element={<ErrorBoundary><DeletedScreenshotsPage /></ErrorBoundary>} />
 
             {/* Projects */}
             <Route path={ROUTES.projects} element={<ErrorBoundary><ProjectsPage /></ErrorBoundary>} />
@@ -58,6 +64,9 @@ export default function App() {
 
             {/* Reports */}
             <Route path={ROUTES.reportsTimeActivity} element={<ErrorBoundary><TimeActivityPage /></ErrorBoundary>} />
+            <Route path={ROUTES.reportsDailyTotal}   element={<ErrorBoundary><DailyTotalPage /></ErrorBoundary>} />
+            <Route path={ROUTES.reportsTimeEdits}    element={<ErrorBoundary><TimeEditsPage /></ErrorBoundary>} />
+            <Route path={ROUTES.reportsWorkSessions} element={<ErrorBoundary><WorkSessionsPage /></ErrorBoundary>} />
 
             {/* People */}
             <Route path={ROUTES.people} element={<ErrorBoundary><PeoplePage /></ErrorBoundary>} />
@@ -73,6 +82,7 @@ export default function App() {
 
             {/* Payments */}
             <Route path={ROUTES.payments} element={<ErrorBoundary><PaymentsPage /></ErrorBoundary>} />
+            <Route path={ROUTES.pastPayments} element={<ErrorBoundary><PastPaymentsPage /></ErrorBoundary>} />
 
             {/* Stub pages */}
             {STUB_PATHS.map(p => (

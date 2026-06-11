@@ -135,7 +135,10 @@
       "Bash(echo \"PID=$!\")",
       "mcp__figma-console__figma_reconnect",
       "Bash(curl -s http://localhost:5173)",
-      "Bash(git merge *)"
+      "Bash(git merge *)",
+      "Bash(git pull *)",
+      "Bash(curl -s http://127.0.0.1:5174/reports/daily-total)",
+      "Bash(git -C /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-main log --oneline -5)"
     ]
   }
 }
