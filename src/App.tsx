@@ -8,6 +8,7 @@ import { ProjectDetailPage } from './pages/ProjectDetailPage'
 import { TasksPage } from './pages/TasksPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { StubPage } from './pages/StubPage'
+import { SecurityPage } from './pages/SecurityPage'
 import { PeoplePage } from './pages/PeoplePage'
 import { PersonProfilePage } from './pages/PersonProfilePage'
 import { SchedulesPage } from './pages/SchedulesPage'
@@ -30,6 +31,7 @@ import { ROUTES } from './lib/routes'
 const STUB_PATHS = [
   ROUTES.reports,
   ROUTES.settings,
+  ROUTES.settingsEmployees,
 ] as const
 
 export default function App() {
@@ -83,6 +85,9 @@ export default function App() {
             {/* Payments */}
             <Route path={ROUTES.payments} element={<ErrorBoundary><PaymentsPage /></ErrorBoundary>} />
             <Route path={ROUTES.pastPayments} element={<ErrorBoundary><PastPaymentsPage /></ErrorBoundary>} />
+
+            {/* Settings */}
+            <Route path={ROUTES.settingsSecurity} element={<ErrorBoundary><SecurityPage /></ErrorBoundary>} />
 
             {/* Stub pages */}
             {STUB_PATHS.map(p => (

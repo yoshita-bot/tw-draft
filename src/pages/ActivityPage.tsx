@@ -553,15 +553,703 @@ function FilterPanel({
 }
 
 // ─────────────────────────────────────────────────────────────
-//  APPS SUB-PAGE  (placeholder)
+//  APPS DATA
+// ─────────────────────────────────────────────────────────────
+
+const APP_DEFS = [
+  { id: 'chrome',   name: 'Google Chrome', category: 'Browser',       color: '#4285F4' },
+  { id: 'vscode',   name: 'VS Code',       category: 'Development',   color: '#007ACC' },
+  { id: 'figma',    name: 'Figma',         category: 'Design',        color: '#A259FF' },
+  { id: 'slack',    name: 'Slack',         category: 'Communication', color: '#611F69' },
+  { id: 'zoom',     name: 'Zoom',          category: 'Communication', color: '#2D8CFF' },
+  { id: 'terminal', name: 'Terminal',      category: 'Development',   color: '#1F2937' },
+  { id: 'notion',   name: 'Notion',        category: 'Productivity',  color: '#6B7280' },
+  { id: 'postman',  name: 'Postman',       category: 'Development',   color: '#FF6C37' },
+]
+const APP_MAP: Record<string, typeof APP_DEFS[0]> = Object.fromEntries(APP_DEFS.map(a => [a.id, a]))
+
+const CLIENTS_APP = ['Abroadworks', 'TechCorp', 'StartupXYZ', 'GlobalMedia', 'FinancePro']
+
+function generateAppData(workerId: string, date: string) {
+  const WORK_HOURS = [9, 10, 11, 13, 14, 15, 16, 17]
+  const appMinsMap: Record<string, number> = {}
+
+  const hourlyData = WORK_HOURS.map(hour => {
+    const seed = _hash(`${workerId}_${date}_${hour}`)
+    const count = 2 + (seed % 2)
+    const hourMins = 50 + (seed % 8)
+    const weights = Array.from({ length: count }, (_, i) =>
+      1 + (_hash(`${workerId}_${date}_${hour}_w${i}`) % 4)
+    )
+    const totalW = weights.reduce((s, w) => s + w, 0)
+    const slots = weights.map((w, i) => {
+      const appIdx = _hash(`${workerId}_${date}_${hour}_a${i}`) % APP_DEFS.length
+      const appId = APP_DEFS[appIdx].id
+      const mins = Math.max(3, Math.round(hourMins * w / totalW))
+      appMinsMap[appId] = (appMinsMap[appId] ?? 0) + mins
+      return { appId, mins }
+    })
+    return { hour, slots }
+  })
+
+  const sortedApps = Object.entries(appMinsMap)
+    .sort((a, b) => b[1] - a[1])
+    .map(([appId, mins]) => ({ appId, mins, def: APP_MAP[appId] }))
+    .filter(x => x.def)
+
+  const totalMins = sortedApps.reduce((s, x) => s + x.mins, 0)
+  return { hourlyData, sortedApps, totalMins }
+}
+
+// ─────────────────────────────────────────────────────────────
+//  DATE RANGE PICKER  (Apps page)
+// ─────────────────────────────────────────────────────────────
+
+type AppDatePreset = 'today' | 'yesterday' | 'last7' | 'last_week' | 'last2weeks' | 'month' | 'last_month'
+const APP_PRESET_LABELS: Record<AppDatePreset, string> = {
+  today: 'Today', yesterday: 'Yesterday', last7: 'Last 7 days',
+  last_week: 'Last week', last2weeks: 'Last 2 weeks',
+  month: 'This month', last_month: 'Last month',
+}
+function parseUTC(s: string) { const [y, m, d] = s.split('-').map(Number); return new Date(Date.UTC(y, m - 1, d)) }
+function isoUTC(d: Date) { return d.toISOString().split('T')[0] }
+function addDaysUTC(ds: string, n: number) { const d = parseUTC(ds); d.setUTCDate(d.getUTCDate() + n); return isoUTC(d) }
+function startOfWeekUTC(ds: string) { const d = parseUTC(ds); const wd = d.getUTCDay(); d.setUTCDate(d.getUTCDate() - (wd === 0 ? 6 : wd - 1)); return isoUTC(d) }
+function startOfMonthUTC(ds: string) { return ds.slice(0, 8) + '01' }
+function endOfMonthUTC(ds: string) { const d = parseUTC(startOfMonthUTC(ds)); d.setUTCMonth(d.getUTCMonth() + 1); d.setUTCDate(0); return isoUTC(d) }
+function fmtMonthYear(year: number, month: number) {
+  return new Date(Date.UTC(year, month, 1)).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'long', year: 'numeric' })
+}
+function fmtRangeLabel(start: string, end: string) {
+  const mo = (s: string) => parseUTC(s).toLocaleDateString('en-US', { timeZone: 'UTC', month: 'short', day: 'numeric' })
+  const sy = parseUTC(start).getUTCFullYear(), ey = parseUTC(end).getUTCFullYear()
+  if (start === end) return `${mo(start)}, ${sy}`
+  if (sy === ey) return `${mo(start)} – ${mo(end)}, ${sy}`
+  return `${mo(start)}, ${sy} – ${mo(end)}, ${ey}`
+}
+function getAppPresetRange(preset: AppDatePreset): { start: string; end: string } {
+  switch (preset) {
+    case 'today':      return { start: TODAY, end: TODAY }
+    case 'yesterday':  return { start: addDaysUTC(TODAY, -1), end: addDaysUTC(TODAY, -1) }
+    case 'last7':      return { start: addDaysUTC(TODAY, -6), end: TODAY }
+    case 'last_week':  { const s = startOfWeekUTC(addDaysUTC(TODAY, -7)); return { start: s, end: addDaysUTC(s, 6) } }
+    case 'last2weeks': return { start: addDaysUTC(TODAY, -13), end: TODAY }
+    case 'month':      return { start: startOfMonthUTC(TODAY), end: TODAY }
+    case 'last_month': { const s = startOfMonthUTC(addDaysUTC(startOfMonthUTC(TODAY), -1)); return { start: s, end: endOfMonthUTC(s) } }
+  }
+}
+function datesInRange(start: string, end: string): string[] {
+  const dates: string[] = []
+  let cur = start
+  while (cur <= end) { dates.push(cur); cur = addDaysUTC(cur, 1) }
+  return dates
+}
+
+const RANGE_WEEKDAYS = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']
+function rangeCalKey(y: number, m: number, d: number) {
+  return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+}
+
+function AppCalendarMonth({ year, month, rangeStart, rangeEnd, hovered, onDayClick, onDayHover }: {
+  year: number; month: number
+  rangeStart: string | null; rangeEnd: string | null; hovered: string | null
+  onDayClick: (ds: string) => void; onDayHover: (ds: string | null) => void
+}) {
+  const firstDay = new Date(Date.UTC(year, month, 1))
+  const lastDay  = new Date(Date.UTC(year, month + 1, 0))
+  const startOffset = (firstDay.getUTCDay() + 6) % 7
+  const cells: Array<number | null> = []
+  for (let i = 0; i < startOffset; i++) cells.push(null)
+  for (let d = 1; d <= lastDay.getUTCDate(); d++) cells.push(d)
+  while (cells.length % 7 !== 0) cells.push(null)
+  const effectiveEnd = rangeEnd ?? hovered
+  function isEdge(ds: string): 'start' | 'end' | 'solo' | null {
+    if (!rangeStart) return null
+    if (!effectiveEnd || effectiveEnd === rangeStart) return ds === rangeStart ? 'solo' : null
+    const a = rangeStart <= effectiveEnd ? rangeStart : effectiveEnd
+    const b = rangeStart <= effectiveEnd ? effectiveEnd : rangeStart
+    if (ds === a && ds === b) return 'solo'
+    if (ds === a) return 'start'
+    if (ds === b) return 'end'
+    return null
+  }
+  function inRange(ds: string) {
+    if (!rangeStart || !effectiveEnd || effectiveEnd === rangeStart) return false
+    const a = rangeStart <= effectiveEnd ? rangeStart : effectiveEnd
+    const b = rangeStart <= effectiveEnd ? effectiveEnd : rangeStart
+    return ds > a && ds < b
+  }
+  return (
+    <div style={{ minWidth: 260, flex: 1 }}>
+      <div style={{ fontSize: 14, fontWeight: 700, color: '#111827', marginBottom: 12, textAlign: 'center' }}>
+        {fmtMonthYear(year, month)}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 4 }}>
+        {RANGE_WEEKDAYS.map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 11.5, fontWeight: 700, color: ['Sa', 'Su'].includes(d) ? '#6C63FF' : '#9CA3AF', padding: '4px 0' }}>{d}</div>
+        ))}
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', rowGap: 2 }}>
+        {cells.map((day, i) => {
+          if (!day) return <div key={`e${i}`} />
+          const ds = rangeCalKey(year, month, day)
+          const edge = isEdge(ds)
+          const range = inRange(ds)
+          const colPos = i % 7
+          const isWeekend = colPos >= 5
+          return (
+            <div key={ds} style={{
+              background: range ? '#EDE9FE' : 'transparent',
+              borderRadius: range && colPos === 0 ? '50% 0 0 50%' : range && colPos === 6 ? '0 50% 50% 0'
+                : edge === 'start' ? '50% 0 0 50%' : edge === 'end' ? '0 50% 50% 0' : 'transparent',
+            }}>
+              <div
+                onMouseEnter={() => onDayHover(ds)}
+                onMouseLeave={() => onDayHover(null)}
+                onClick={() => onDayClick(ds)}
+                style={{
+                  width: 34, height: 34, margin: '0 auto',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  borderRadius: '50%', cursor: 'pointer', position: 'relative', zIndex: 1,
+                  background: edge ? '#6C63FF' : 'transparent',
+                  color: edge ? '#fff' : isWeekend ? '#6C63FF' : '#374151',
+                  fontWeight: edge ? 700 : 400, fontSize: 13,
+                  outline: ds === TODAY && !edge ? '2px solid #C7C3FF' : 'none', outlineOffset: -1,
+                }}
+              >{day}</div>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function AppDateRangePicker({ start, end, onApply, onCancel }: {
+  start: string; end: string; onApply: (s: string, e: string) => void; onCancel: () => void
+}) {
+  const [selStart, setSelStart]   = useState<string | null>(start)
+  const [selEnd,   setSelEnd]     = useState<string | null>(end)
+  const [hovered,  setHovered]    = useState<string | null>(null)
+  const [selecting, setSelecting] = useState(false)
+
+  const todayD = parseUTC(TODAY)
+  const prevM  = todayD.getUTCMonth() === 0 ? 11 : todayD.getUTCMonth() - 1
+  const prevY  = todayD.getUTCMonth() === 0 ? todayD.getUTCFullYear() - 1 : todayD.getUTCFullYear()
+  const [leftYear,   setLeftYear]   = useState(prevY)
+  const [leftMonth,  setLeftMonth]  = useState(prevM)
+  const [rightYear,  setRightYear]  = useState(prevM === 11 ? prevY + 1 : prevY)
+  const [rightMonth, setRightMonth] = useState(prevM === 11 ? 0 : prevM + 1)
+
+  function syncRight(ly: number, lm: number) {
+    if (lm === 11) { setRightYear(ly + 1); setRightMonth(0) }
+    else           { setRightYear(ly);     setRightMonth(lm + 1) }
+  }
+  function navLeft(dir: -1 | 1) {
+    let m = leftMonth + dir, y = leftYear
+    if (m < 0) { m = 11; y-- } else if (m > 11) { m = 0; y++ }
+    setLeftYear(y); setLeftMonth(m); syncRight(y, m)
+  }
+  function handleDayClick(ds: string) {
+    if (!selecting) { setSelStart(ds); setSelEnd(null); setSelecting(true) }
+    else {
+      const [a, b] = ds < selStart! ? [ds, selStart!] : [selStart!, ds]
+      setSelStart(a); setSelEnd(b); setSelecting(false)
+    }
+  }
+
+  const presets: AppDatePreset[] = ['today', 'yesterday', 'last7', 'last_week', 'last2weeks', 'month', 'last_month']
+  const activePreset = presets.find(p => {
+    const r = getAppPresetRange(p); return r.start === selStart && r.end === selEnd
+  }) ?? null
+  function applyPreset(p: AppDatePreset) {
+    const r = getAppPresetRange(p); setSelStart(r.start); setSelEnd(r.end); setSelecting(false)
+  }
+
+  const canApply = !!selStart && !!selEnd
+  const footer1  = selStart ? fmtDateFull(selStart) : '—'
+  const footer2  = selEnd ? fmtDateFull(selEnd) : (selecting && hovered ? fmtDateFull(hovered) : '—')
+  const navBtnSty: React.CSSProperties = { width: 32, height: 32, border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', flexShrink: 0 }
+  const ftDateSty: React.CSSProperties = { height: 32, padding: '0 12px', border: '1px solid #E5E7EB', borderRadius: 7, display: 'flex', alignItems: 'center', fontSize: 12.5, color: '#374151', fontWeight: 500, background: '#FAFAFA' }
+
+  return (
+    <div style={{ background: '#fff', borderRadius: 12, boxShadow: '0 12px 40px rgba(0,0,0,0.16)', border: '1px solid #E5E7EB', overflow: 'hidden', display: 'flex', userSelect: 'none' }}>
+      <div style={{ flex: 1, padding: '20px 20px 16px', minWidth: 580 }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16, gap: 8 }}>
+          <button onClick={() => navLeft(-1)} style={navBtnSty}><ChevronLeft width={16} height={16} /></button>
+          <button onClick={() => navLeft(1)}  style={navBtnSty}><ChevronRight width={16} height={16} /></button>
+          <div style={{ flex: 1, marginLeft: 4, height: 34, border: '1px solid #E5E7EB', borderRadius: 7, display: 'flex', alignItems: 'center', padding: '0 12px', gap: 8, fontSize: 13, color: '#374151', fontWeight: 500 }}>
+            <CalendarDays width={14} height={14} color="#9CA3AF" />
+            {selStart && selEnd ? fmtRangeLabel(selStart, selEnd) : selStart ? fmtDateFull(selStart) + ' → …' : 'Select start date'}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          <div style={{ flex: 1 }}>
+            <AppCalendarMonth year={leftYear} month={leftMonth} rangeStart={selStart} rangeEnd={selEnd} hovered={hovered} onDayClick={handleDayClick} onDayHover={setHovered} />
+          </div>
+          <div style={{ width: 1, background: '#F0F0F0', flexShrink: 0 }} />
+          <div style={{ flex: 1 }}>
+            <AppCalendarMonth year={rightYear} month={rightMonth} rangeStart={selStart} rangeEnd={selEnd} hovered={hovered} onDayClick={handleDayClick} onDayHover={setHovered} />
+          </div>
+        </div>
+        <div style={{ marginTop: 16, borderTop: '1px solid #F0F0F0', paddingTop: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ flex: 1, display: 'flex', gap: 8 }}>
+            <div style={ftDateSty}>{footer1}</div>
+            <div style={{ display: 'flex', alignItems: 'center', color: '#D1D5DB' }}>→</div>
+            <div style={ftDateSty}>{footer2}</div>
+          </div>
+          <button onClick={onCancel} style={{ padding: '7px 16px', border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280', fontFamily: 'inherit' }}>Cancel</button>
+          <button onClick={() => canApply && onApply(selStart!, selEnd!)} disabled={!canApply}
+            style={{ padding: '7px 20px', border: 'none', borderRadius: 7, background: canApply ? '#10B981' : '#E5E7EB', color: canApply ? '#fff' : '#9CA3AF', cursor: canApply ? 'pointer' : 'default', fontSize: 13, fontWeight: 700, fontFamily: 'inherit' }}>
+            Apply
+          </button>
+        </div>
+      </div>
+      <div style={{ width: 148, borderLeft: '1px solid #F0F0F0', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        {presets.map(p => {
+          const active = activePreset === p
+          return (
+            <button key={p} onClick={() => applyPreset(p)}
+              style={{ padding: '9px 16px', border: 'none', background: active ? '#F5F3FF' : 'transparent', cursor: 'pointer', textAlign: 'left', fontSize: 13, fontWeight: active ? 700 : 400, color: active ? '#6C63FF' : '#374151', fontFamily: 'inherit', borderLeft: active ? '3px solid #6C63FF' : '3px solid transparent', transition: 'background 0.1s' }}
+              onMouseEnter={e => { if (!active) (e.currentTarget as HTMLElement).style.background = '#FAFAFA' }}
+              onMouseLeave={e => { if (!active) (e.currentTarget as HTMLElement).style.background = 'transparent' }}
+            >
+              {APP_PRESET_LABELS[p]}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function AppDateButton({ rangeStart, rangeEnd, onApply }: { rangeStart: string; rangeEnd: string; onApply: (s: string, e: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    function onDown(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', onDown); return () => document.removeEventListener('mousedown', onDown)
+  }, [])
+  return (
+    <div ref={ref} style={{ position: 'relative', flexShrink: 0 }}>
+      <button onClick={() => setOpen(x => !x)} style={{ display: 'flex', alignItems: 'center', gap: 6, height: 34, padding: '0 12px', border: `1px solid ${open ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 7, background: open ? '#F5F3FF' : '#fff', cursor: 'pointer', fontSize: 13, fontFamily: 'inherit' }}>
+        <CalendarDays width={13} height={13} color={open ? '#6C63FF' : '#9CA3AF'} />
+        <span style={{ fontSize: 12, color: '#9CA3AF' }}>Date:</span>
+        <span style={{ fontWeight: 700, color: '#111827' }}>{fmtRangeLabel(rangeStart, rangeEnd)}</span>
+        <ChevronDownIcon width={13} height={13} color="#9CA3AF" style={{ transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 400 }}>
+          <AppDateRangePicker start={rangeStart} end={rangeEnd} onApply={(s, e) => { onApply(s, e); setOpen(false) }} onCancel={() => setOpen(false)} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────
+//  APPS SUB-PAGE
 // ─────────────────────────────────────────────────────────────
 
 function AppsPage() {
+  const [workerId, setWorkerId]     = useState('w1')
+  const [rangeStart, setRangeStart] = useState(TODAY)
+  const [rangeEnd,   setRangeEnd]   = useState(TODAY)
+  const [project, setProject]       = useState('')
+  const [client, setClient]         = useState('')
+  const [collapsedHours, setCollapsedHours] = useState<Set<string>>(new Set())
+  const [collapsedDays,  setCollapsedDays]  = useState<Set<string>>(new Set())
+
+  const worker = WORKERS.find(w => w.id === workerId) ?? WORKERS[0]
+
+  // Aggregate app usage across all dates in range; timeline shows rangeEnd day
+  const { allDaysData, sortedApps, totalMins } = useMemo(() => {
+    const dates = datesInRange(rangeStart, rangeEnd)
+    const aggMins: Record<string, number> = {}
+    dates.forEach(date => {
+      generateAppData(workerId, date).sortedApps.forEach(a => {
+        aggMins[a.appId] = (aggMins[a.appId] ?? 0) + a.mins
+      })
+    })
+    const sortedApps = Object.entries(aggMins)
+      .sort((a, b) => b[1] - a[1])
+      .map(([appId, mins]) => ({ appId, mins, def: APP_MAP[appId] }))
+      .filter(x => x.def)
+    const totalMins = sortedApps.reduce((s, x) => s + x.mins, 0)
+    const allDaysData = dates.map(date => ({
+      date,
+      hourlyData: generateAppData(workerId, date).hourlyData,
+    }))
+    return { allDaysData, sortedApps, totalMins }
+  }, [workerId, rangeStart, rangeEnd])
+
+  const uniqueApps  = sortedApps.length
+  const topApp      = sortedApps[0]
+  const activeHours = allDaysData.reduce((s, d) => s + d.hourlyData.filter(h => h.slots.length > 0).length, 0)
+  const maxAppMins  = sortedApps[0]?.mins ?? 1
+
+  const fmtT = (mins: number) => {
+    const h = Math.floor(mins / 60), m = mins % 60
+    return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`
+  }
+
+  const fmtHour = (h: number) => {
+    const ampm = h < 12 ? 'AM' : 'PM'
+    return `${h % 12 || 12}:00 ${ampm}`
+  }
+
+  const selStyle: React.CSSProperties = {
+    height: 34, padding: '0 30px 0 10px', border: '1px solid #E8E8E8', borderRadius: 8,
+    fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
+    outline: 'none', appearance: 'none', fontFamily: 'inherit', fontWeight: 500,
+  }
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '50vh', gap: 12, color: '#9CA3AF' }}>
-      <Monitor width={40} height={40} strokeWidth={1.2} />
-      <div style={{ fontSize: 15, fontWeight: 600, color: '#6B7280' }}>Apps tracking coming soon</div>
-      <div style={{ fontSize: 13 }}>This section will show app usage breakdowns by project.</div>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+
+      {/* ── Filter bar ── */}
+      <div style={{
+        padding: '12px 24px', background: '#fff', borderBottom: '1px solid #E5E7EB',
+        display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0, flexWrap: 'wrap',
+      }}>
+        {/* Member */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)',
+            width: 20, height: 20, borderRadius: '50%', background: worker.bg,
+            color: worker.color, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 8, fontWeight: 700, pointerEvents: 'none', zIndex: 1,
+          }}>
+            {worker.initials}
+          </div>
+          <select value={workerId} onChange={e => setWorkerId(e.target.value)}
+            style={{ ...selStyle, paddingLeft: 34 }}>
+            {WORKERS.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+          </select>
+          <ChevronDownIcon style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
+        </div>
+
+        {/* Date range */}
+        <AppDateButton
+          rangeStart={rangeStart} rangeEnd={rangeEnd}
+          onApply={(s, e) => { setRangeStart(s); setRangeEnd(e) }}
+        />
+
+        {/* Project */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={project} onChange={e => setProject(e.target.value)} style={selStyle}>
+            <option value="">All Projects</option>
+            {PROJECTS.slice(0, 8).map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <ChevronDownIcon style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
+        </div>
+
+        {/* Client */}
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <select value={client} onChange={e => setClient(e.target.value)} style={selStyle}>
+            <option value="">All Clients</option>
+            {CLIENTS_APP.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <ChevronDownIcon style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        <button style={{ width: 34, height: 34, border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', flexShrink: 0 }}>
+          <Download width={14} height={14} />
+        </button>
+      </div>
+
+      {/* ── Scrollable content ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '24px 28px 40px' }}>
+
+        {/* KPI cards */}
+        <div style={{ display: 'flex', gap: 12, marginBottom: 28 }}>
+          <KpiCard icon={<Monitor width={20} height={20} />} iconBg="#EEEDFF" iconColor="#6C63FF"
+            label="Apps Used" value={String(uniqueApps)} sub="distinct applications today" />
+          <KpiCard icon={<Clock width={20} height={20} />} iconBg="#FFF7ED" iconColor="#F59E0B"
+            label="Total App Time" value={fmtT(totalMins)} sub="tracked usage today" />
+          <KpiCard icon={<Zap width={20} height={20} />} iconBg="#F0FDF4" iconColor="#10B981"
+            label="Top App" value={topApp?.def?.name ?? '—'}
+            sub={topApp ? `${fmtT(topApp.mins)} · ${topApp.def.category}` : 'No data'} />
+          <KpiCard icon={<LayoutGrid width={20} height={20} />} iconBg="#FDF2F8" iconColor="#EC4899"
+            label="Active Hours" value={String(activeHours)} sub="hours with tracked usage" />
+        </div>
+
+        {/* ══ Application Usage ══ */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Application Usage</span>
+            <span style={{ fontSize: 12, color: '#6B7280', background: '#F3F4F6', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>
+              {fmtRangeLabel(rangeStart, rangeEnd)}
+            </span>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16 }}>
+
+            {/* Horizontal bar chart */}
+            <div style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 12, padding: '20px 24px' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 20 }}>
+                Time by Application
+              </div>
+              {sortedApps.map(app => {
+                const pct = maxAppMins > 0 ? (app.mins / maxAppMins) * 100 : 0
+                return (
+                  <div key={app.appId} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                    <div style={{
+                      width: 30, height: 30, borderRadius: 7, flexShrink: 0,
+                      background: app.def.color, display: 'flex', alignItems: 'center',
+                      justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff',
+                    }}>
+                      {app.def.name.slice(0, 1)}
+                    </div>
+                    <div style={{ width: 120, flexShrink: 0 }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {app.def.name}
+                      </div>
+                      <div style={{ fontSize: 10.5, color: '#9CA3AF' }}>{app.def.category}</div>
+                    </div>
+                    <div style={{ flex: 1, height: 8, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${pct}%`, background: app.def.color, borderRadius: 99, transition: 'width 0.3s' }} />
+                    </div>
+                    <div style={{ width: 50, textAlign: 'right', fontSize: 12.5, fontWeight: 700, color: '#374151', flexShrink: 0 }}>
+                      {fmtT(app.mins)}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Ranked list */}
+            <div style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 60px 52px', padding: '11px 16px', background: '#FAFAFA', borderBottom: '1px solid #E8E8E8' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>App</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Time</div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Share</div>
+              </div>
+              {sortedApps.map((app, idx) => {
+                const share = totalMins > 0 ? Math.round(app.mins / totalMins * 100) : 0
+                return (
+                  <div key={app.appId} style={{
+                    display: 'grid', gridTemplateColumns: '1fr 60px 52px', alignItems: 'center',
+                    padding: '9px 16px', borderBottom: '1px solid #F5F5F5',
+                    background: idx % 2 === 0 ? '#fff' : '#FAFBFF',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: '#D1D5DB', width: 14, textAlign: 'center', flexShrink: 0 }}>{idx + 1}</span>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: app.def.color, flexShrink: 0 }} />
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {app.def.name}
+                        </div>
+                        <div style={{ fontSize: 10.5, color: '#9CA3AF' }}>{app.def.category}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontSize: 12.5, fontWeight: 700, color: '#374151', textAlign: 'right' }}>{fmtT(app.mins)}</div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#6B7280', textAlign: 'right' }}>{share}%</div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* ══ Application Activity Timeline ══ */}
+        <div>
+          {(() => {
+            const allHourKeys = allDaysData.flatMap(({ date, hourlyData }) =>
+              hourlyData.map(({ hour }) => `${date}_${hour}`)
+            )
+            const allCollapsed = allHourKeys.length > 0 && allHourKeys.every(k => collapsedHours.has(k))
+            const toggleAll = () => {
+              if (allCollapsed) {
+                setCollapsedHours(new Set())
+              } else {
+                setCollapsedHours(new Set(allHourKeys))
+              }
+            }
+            const toggleHour = (key: string) => {
+              setCollapsedHours(prev => {
+                const next = new Set(prev)
+                next.has(key) ? next.delete(key) : next.add(key)
+                return next
+              })
+            }
+            return (
+              <>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                  <span style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Application Activity Timeline</span>
+                  <span style={{ fontSize: 12, color: '#6B7280', background: '#F3F4F6', padding: '2px 10px', borderRadius: 99, fontWeight: 600 }}>
+                    Hourly Breakdown
+                  </span>
+                  <button
+                    onClick={toggleAll}
+                    style={{
+                      marginLeft: 'auto', fontSize: 12, fontWeight: 600, color: '#6C63FF',
+                      background: 'none', border: 'none', cursor: 'pointer', padding: '3px 8px',
+                      borderRadius: 6, transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#F3F2FF')}
+                    onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                  >
+                    {allCollapsed ? 'Expand all' : 'Collapse all'}
+                  </button>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {allDaysData.map(({ date, hourlyData }) => {
+                    const dayTotalMins = hourlyData.reduce((s, h) => s + h.slots.reduce((hs, slot) => hs + slot.mins, 0), 0)
+                    const isWeekend = [0, 6].includes(parseUTC(date).getUTCDay())
+                    const dayCollapsed = collapsedDays.has(date)
+                    const toggleDay = () => setCollapsedDays(prev => {
+                      const next = new Set(prev); next.has(date) ? next.delete(date) : next.add(date); return next
+                    })
+                    return (
+                      <div key={date} style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 12, overflow: 'hidden' }}>
+                        {/* Day header */}
+                        <div
+                          onClick={toggleDay}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 12,
+                            padding: '11px 24px', background: '#FAFAFA',
+                            borderBottom: dayCollapsed ? 'none' : '1px solid #E8E8E8',
+                            cursor: 'pointer', userSelect: 'none',
+                          }}
+                        >
+                          <div style={{ fontSize: 13, fontWeight: 700, color: isWeekend ? '#6C63FF' : '#111827' }}>
+                            {fmtDateFull(date)}
+                          </div>
+                          {date === TODAY && (
+                            <span style={{ fontSize: 10.5, fontWeight: 700, color: '#6C63FF', background: '#EEEDFF', padding: '1px 7px', borderRadius: 99 }}>Today</span>
+                          )}
+                          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#9CA3AF', fontVariantNumeric: 'tabular-nums' }}>
+                            {fmtT(dayTotalMins)} total
+                          </div>
+                          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" style={{ marginLeft: 8, flexShrink: 0, transition: 'transform 0.15s', transform: dayCollapsed ? 'rotate(0deg)' : 'rotate(180deg)' }}>
+                            <path d="M3 4.5L6 7.5L9 4.5" stroke="#C4C4C4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+
+                        {!dayCollapsed && <>
+                        {/* Column headers */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '88px 1fr', padding: '8px 20px 8px 24px', borderBottom: '1px solid #F0F0F0' }}>
+                          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#C4C4C4', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Hour</div>
+                          <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr 56px', gap: 12 }}>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#C4C4C4', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Application</div>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#C4C4C4', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Breakdown</div>
+                            <div style={{ fontSize: 10.5, fontWeight: 700, color: '#C4C4C4', textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'right' }}>Time</div>
+                          </div>
+                        </div>
+
+                        {/* Hour rows */}
+                        {hourlyData.map(({ hour, slots }, idx) => {
+                          const hourKey = `${date}_${hour}`
+                          const collapsed = collapsedHours.has(hourKey)
+                          const rowMins = slots.reduce((s, x) => s + x.mins, 0)
+                          const maxSlotMins = Math.max(...slots.map(s => s.mins), 1)
+                          const isLast = idx === hourlyData.length - 1
+                          return (
+                            <div key={hour} style={{
+                              borderBottom: isLast ? 'none' : '1px solid #F0F0F0',
+                            }}>
+                              {/* Hour label row — always visible, clickable */}
+                              <div
+                                onClick={() => toggleHour(hourKey)}
+                                style={{
+                                  display: 'grid', gridTemplateColumns: '88px 1fr',
+                                  cursor: 'pointer',
+                                  background: collapsed ? '#FAFAFA' : 'transparent',
+                                  transition: 'background 0.1s',
+                                }}
+                                onMouseEnter={e => { if (collapsed) return; e.currentTarget.style.background = '#FAFBFF' }}
+                                onMouseLeave={e => { e.currentTarget.style.background = collapsed ? '#FAFAFA' : 'transparent' }}
+                              >
+                                <div style={{
+                                  padding: '14px 0 14px 24px', display: 'flex', flexDirection: 'column',
+                                  justifyContent: 'flex-start', paddingTop: 16, borderRight: '1px solid #F0F0F0',
+                                }}>
+                                  <div style={{ fontSize: 12.5, fontWeight: 700, color: '#374151' }}>{fmtHour(hour)}</div>
+                                  <div style={{ fontSize: 10.5, color: '#C4C4C4', marginTop: 3, fontVariantNumeric: 'tabular-nums' }}>{fmtT(rowMins)}</div>
+                                </div>
+
+                                {collapsed ? (
+                                  /* Collapsed summary row */
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px' }}>
+                                    {slots.slice(0, 5).map((slot, i) => {
+                                      const def = APP_MAP[slot.appId]
+                                      return (
+                                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                          <div style={{ width: 3, height: 16, borderRadius: 99, background: def?.color ?? '#ccc' }} />
+                                          <span style={{ fontSize: 11.5, color: '#6B7280', fontWeight: 500 }}>{def?.name ?? slot.appId}</span>
+                                        </div>
+                                      )
+                                    })}
+                                    {slots.length > 5 && (
+                                      <span style={{ fontSize: 11, color: '#C4C4C4' }}>+{slots.length - 5} more</span>
+                                    )}
+                                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                        <path d="M3 4.5L6 7.5L9 4.5" stroke="#C4C4C4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                      </svg>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* Expand chevron when open */
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 20px' }}>
+                                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                                      <path d="M3 7.5L6 4.5L9 7.5" stroke="#C4C4C4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                    </svg>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* App detail rows — hidden when collapsed */}
+                              {!collapsed && (
+                                <div style={{ padding: '4px 0', borderTop: '1px solid #F9F9F9' }}>
+                                  {slots.map((slot, i) => {
+                                    const def = APP_MAP[slot.appId]
+                                    const barPct = maxSlotMins > 0 ? (slot.mins / maxSlotMins) * 100 : 0
+                                    const isLastSlot = i === slots.length - 1
+                                    return (
+                                      <div key={i} style={{
+                                        display: 'grid', gridTemplateColumns: '180px 1fr 56px', gap: 12,
+                                        alignItems: 'center', padding: '8px 20px 8px 112px',
+                                        borderBottom: isLastSlot ? 'none' : '1px solid #F9F9F9',
+                                      }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
+                                          <div style={{ width: 3, height: 28, borderRadius: 99, flexShrink: 0, background: def?.color ?? '#ccc' }} />
+                                          <div style={{ minWidth: 0 }}>
+                                            <div style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                              {def?.name ?? slot.appId}
+                                            </div>
+                                            <div style={{ fontSize: 10.5, color: '#9CA3AF', marginTop: 1 }}>{def?.category ?? ''}</div>
+                                          </div>
+                                        </div>
+                                        <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
+                                          <div style={{ height: '100%', width: `${barPct}%`, background: def?.color ?? '#ccc', opacity: 0.7, borderRadius: 99 }} />
+                                        </div>
+                                        <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                                          {fmtT(slot.mins)}
+                                        </div>
+                                      </div>
+                                    )
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                        </>}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })()}
+        </div>
+
+      </div>
     </div>
   )
 }
@@ -1468,14 +2156,12 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
       <TopBar crumbs={[{ label: 'Activity' }, { label: view === 'apps' ? 'Apps' : 'Screenshots' }]} />
 
       {view === 'apps' ? (
-        <div style={{ flex: 1, overflowY: 'auto', padding: '0 28px' }}>
-          <AppsPage />
-        </div>
+        <AppsPage />
       ) : (
         <>
           {/* ── Filter bar ── */}
           <div style={{
-            padding: '12px 28px', borderBottom: '1px solid #F0F0F0',
+            padding: '12px 24px', background: '#fff', borderBottom: '1px solid #E5E7EB',
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           }}>
             {/* Employee dropdown */}

@@ -594,7 +594,7 @@ export function PaymentsPage() {
       <TopBar crumbs={[{ label: 'Financials' }, { label: 'Create Payments' }]} />
 
       {/* Toolbar */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 24px', background: '#fff', borderBottom: '1px solid #F3F4F6', flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 24px', background: '#fff', borderBottom: '1px solid #E5E7EB', flexWrap: 'wrap' }}>
 
         {/* Date range */}
         <div ref={calRef} style={{ position: 'relative' }}>

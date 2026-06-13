@@ -30,6 +30,7 @@ export const ROUTES = {
   pastPayments:         '/past-payments',
   settings:             '/settings',
   settingsEmployees:    '/settings/employees',
+  settingsSecurity:     '/settings/security',
 } as const
 
 export type AppRoute = (typeof ROUTES)[keyof typeof ROUTES]

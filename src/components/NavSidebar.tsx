@@ -5,7 +5,7 @@ import {
   CalendarDays, BarChart2, CreditCard, Users, Settings,
   Camera, Monitor, Star, CheckSquare, UserCheck, UserCog,
   Trash2, TrendingUp, Calendar, Building2, ChevronDown,
-  DollarSign, ClipboardList,
+  DollarSign, ClipboardList, Shield,
 } from 'lucide-react'
 import { ROUTES } from '../lib/routes'
 
@@ -67,8 +67,9 @@ const NAV_ITEMS: NavItem[] = [
   {
     icon: Settings, label: 'Settings', path: ROUTES.settings,
     children: [
-      { icon: Settings, label: 'Organization', path: ROUTES.settings          },
-      { icon: UserCog,  label: 'Employees',    path: ROUTES.settingsEmployees },
+      { icon: Settings, label: 'Organization',     path: ROUTES.settings          },
+      { icon: UserCog,  label: 'Employees',        path: ROUTES.settingsEmployees },
+      { icon: Shield,   label: 'Security & Login', path: ROUTES.settingsSecurity  },
     ],
   },
 ]
@@ -163,8 +164,7 @@ export function NavSidebar() {
 
   const childRow = (child: NavChild) => {
     const ChildIcon     = child.icon
-    const isChildActive = location.pathname === child.path ||
-      location.pathname.startsWith(child.path + '/')
+    const isChildActive = location.pathname === child.path
     return (
       <a
         key={child.path}

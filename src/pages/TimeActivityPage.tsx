@@ -1358,7 +1358,7 @@ ${xmlRows}
       <TopBar crumbs={[{ label: 'Reports' }, { label: 'Time & activity' }]} />
 
       {/* Filter bar */}
-      <div style={{ padding: '10px 28px', borderBottom: '1px solid #F0F0F0', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+      <div style={{ padding: '12px 24px', background: '#fff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <DateButton rangeStart={rangeStart} rangeEnd={rangeEnd} onApply={(s, e) => { setRangeStart(s); setRangeEnd(e) }} />
         <div style={{ width: 1, height: 20, background: '#E5E7EB', flexShrink: 0 }} />
         <GroupByBar groupBy={groupBy} setGroupBy={g => { setGroupBy(g); setSelected(new Set()) }} selected={selected} setSelected={setSelected} projectItems={projectItems} clientItems={clientItems} memberItems={memberItems} teamItems={teamItems} />

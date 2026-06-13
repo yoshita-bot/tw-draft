@@ -1727,7 +1727,7 @@ export function SchedulesPage() {
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
         {/* ── Row 1: Views + nav + tz + add ── */}
-        <div style={{ padding: '10px 24px', background: '#F7F8FA', borderBottom: '1px solid #EBEBEB', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ padding: '12px 24px', background: '#fff', borderBottom: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
 
           {/* View tabs */}
           <div style={{ display: 'flex', background: '#fff', border: '1px solid #E8E8E8', borderRadius: 8, overflow: 'hidden' }}>
