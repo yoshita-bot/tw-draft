@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Search, X, Globe, Users, Briefcase, Calendar, Plus, Upload, ImageIcon } from 'lucide-react'
+import { Search, X, Globe, Users, Briefcase, Calendar, Plus, Upload, ImageIcon, ChevronDown } from 'lucide-react'
 import { TopBar, type Crumb } from '../components/TopBar'
 import { CLIENTS, type Client, type ClientStatus } from '../data/clientsData'
 import { EMPLOYEES } from '../data/employeesData'
@@ -152,47 +152,45 @@ export function ClientsPage() {
   })
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <TopBar crumbs={[{ label: 'Clients' }] satisfies Crumb[]} />
 
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#F7F8FA' }}>
+
       {/* ── Toolbar ── */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px 0',
-        flexWrap: 'wrap',
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: '#F9FAFB', border: '1px solid #E8E8E8', borderRadius: 8,
-          padding: '7px 11px', width: 260, boxSizing: 'border-box',
-        }}>
-          <Search width={14} height={14} color="#9CA3AF" />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
+          <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search clients…"
-            style={{
-              border: 'none', background: 'transparent', outline: 'none',
-              fontSize: 13, color: '#111827', width: '100%',
-            }}
+            style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}
           />
           {query && (
-            <X width={13} height={13} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setQuery('')} />
+            <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', padding: 0 }}>
+              <X width={12} height={12} />
+            </button>
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 500 }}>Status:</span>
-          {(['all', 'active', 'onboarding', 'inactive'] as const).map(s => (
-            <FilterPill
-              key={s}
-              label={s === 'all' ? 'All' : STATUS_STYLES[s].label}
-              active={statusFilter === s}
-              onClick={() => setStatusFilter(s)}
-            />
-          ))}
+        <div style={{ position: 'relative' }}>
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as typeof statusFilter)}
+            style={{ height: 34, padding: '0 28px 0 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none', fontFamily: 'inherit', appearance: 'none' }}
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="onboarding">Onboarding</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <ChevronDown style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
         </div>
 
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: '#9CA3AF', fontWeight: 500 }}>
+        <div style={{ flex: 1 }} />
+
+        <span style={{ fontSize: 12.5, color: '#9CA3AF', fontWeight: 500 }}>
           {filtered.length} client{filtered.length !== 1 ? 's' : ''}
         </span>
 
@@ -212,7 +210,7 @@ export function ClientsPage() {
       </div>
 
       {/* ── Table ── */}
-      <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 20px' }}>
+      <div style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0, tableLayout: 'fixed' }}>
           <colgroup>
             <col style={{ width: '24%' }} />
@@ -275,6 +273,8 @@ export function ClientsPage() {
           </tbody>
         </table>
       </div>
+
+      </div>{/* end content wrapper */}
 
       {addingClient && <AddClientModal onClose={() => setAddingClient(false)} />}
     </div>

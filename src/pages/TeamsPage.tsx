@@ -455,23 +455,24 @@ export function TeamsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       <TopBar crumbs={[{ label: 'Teams' }] satisfies Crumb[]} />
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 20px 0', flexWrap: 'wrap' }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8,
-          padding: '7px 11px', minWidth: 220,
-        }}>
-          <Search width={14} height={14} color="#9CA3AF" />
+      <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#F7F8FA' }}>
+
+      {/* ── Toolbar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+        <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
+          <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
           <input
             value={query}
             onChange={e => setQuery(e.target.value)}
             placeholder="Search teams…"
-            style={{ border: 'none', background: 'transparent', outline: 'none', fontSize: 13, color: '#111827', width: '100%' }}
+            style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}
           />
-          {query && <X width={13} height={13} color="#9CA3AF" style={{ cursor: 'pointer' }} onClick={() => setQuery('')} />}
+          {query && <button onClick={() => setQuery('')} style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', display: 'flex', padding: 0 }}><X width={12} height={12} /></button>}
         </div>
 
-        <span style={{ marginLeft: 'auto', fontSize: 12.5, color: '#9CA3AF', fontWeight: 500 }}>
+        <div style={{ flex: 1 }} />
+
+        <span style={{ fontSize: 12.5, color: '#9CA3AF', fontWeight: 500 }}>
           {filtered.length} team{filtered.length !== 1 ? 's' : ''}
         </span>
 
@@ -479,7 +480,7 @@ export function TeamsPage() {
           onClick={() => setShowAdd(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8, border: 'none',
+            padding: '8px 16px', borderRadius: 8, border: 'none',
             background: '#6C63FF', color: '#fff', cursor: 'pointer',
             fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
           }}
@@ -490,7 +491,7 @@ export function TeamsPage() {
         </button>
       </div>
 
-      <div style={{ flex: 1, overflow: 'auto', padding: '14px 20px 20px' }}>
+      <div style={{ background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
           <thead>
             <tr style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
@@ -516,6 +517,8 @@ export function TeamsPage() {
           </tbody>
         </table>
       </div>
+
+      </div>{/* end content wrapper */}
 
       {showAdd && <AddTeamModal onClose={() => setShowAdd(false)} onAdd={handleAdd} />}
     </div>
