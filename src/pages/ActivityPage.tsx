@@ -1478,6 +1478,46 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
             padding: '12px 28px', borderBottom: '1px solid #F0F0F0',
             display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
           }}>
+            {/* Employee dropdown */}
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              <select
+                value={workerId}
+                onChange={e => setWorkerId(e.target.value)}
+                style={{
+                  height: 34, padding: '0 32px 0 32px', border: '1px solid #E8E8E8', borderRadius: 8,
+                  fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
+                  outline: 'none', appearance: 'none', fontFamily: 'inherit', fontWeight: 500,
+                }}
+              >
+                {WORKERS.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
+              </select>
+              <div style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, borderRadius: '50%', background: worker.bg, color: worker.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, pointerEvents: 'none' }}>
+                {worker.initials}
+              </div>
+              <ChevronDown style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
+            </div>
+
+            {/* Date nav */}
+            <DateNav date={date} onChange={setDate} />
+
+            {/* Timezone dropdown */}
+            <select
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              style={{
+                height: 34, padding: '0 12px', border: '1px solid #E8E8E8', borderRadius: 8,
+                fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
+                outline: 'none', appearance: 'none', fontFamily: 'inherit', flexShrink: 0,
+              }}
+            >
+              {TIMEZONES.map(tz => (
+                <option key={tz.id} value={tz.id}>{tz.label} ({tz.offset})</option>
+              ))}
+            </select>
+
+            {/* Spacer */}
+            <div style={{ flex: 1 }} />
+
             {/* 10min / All toggle */}
             <div style={{ display: 'flex', background: '#F3F4F6', borderRadius: 8, padding: 3, gap: 2, flexShrink: 0 }}>
               <button onClick={() => setViewMode('10min')} style={selBtn(viewMode === '10min')}>10 Min</button>
@@ -1522,46 +1562,6 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
                 <span style={{ position: 'absolute', top: 5, right: 5, width: 6, height: 6, borderRadius: '50%', background: '#6C63FF', border: '1.5px solid #fff' }} />
               )}
             </button>
-
-            {/* Employee dropdown */}
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <select
-                value={workerId}
-                onChange={e => setWorkerId(e.target.value)}
-                style={{
-                  height: 34, padding: '0 32px 0 32px', border: '1px solid #E8E8E8', borderRadius: 8,
-                  fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
-                  outline: 'none', appearance: 'none', fontFamily: 'inherit', fontWeight: 500,
-                }}
-              >
-                {WORKERS.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-              </select>
-              <div style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', width: 20, height: 20, borderRadius: '50%', background: worker.bg, color: worker.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, pointerEvents: 'none' }}>
-                {worker.initials}
-              </div>
-              <ChevronDown style={{ position: 'absolute', right: 9, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} width={13} height={13} color="#9CA3AF" />
-            </div>
-
-            {/* Timezone dropdown */}
-            <select
-              value={timezone}
-              onChange={e => setTimezone(e.target.value)}
-              style={{
-                height: 34, padding: '0 12px', border: '1px solid #E8E8E8', borderRadius: 8,
-                fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
-                outline: 'none', appearance: 'none', fontFamily: 'inherit', flexShrink: 0,
-              }}
-            >
-              {TIMEZONES.map(tz => (
-                <option key={tz.id} value={tz.id}>{tz.label} ({tz.offset})</option>
-              ))}
-            </select>
-
-            {/* Spacer */}
-            <div style={{ flex: 1 }} />
-
-            {/* Date nav */}
-            <DateNav date={date} onChange={setDate} />
 
             {/* Download */}
             <button style={{ width: 34, height: 34, border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', flexShrink: 0 }}>

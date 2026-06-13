@@ -591,8 +591,8 @@ export function PeoplePage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 24px', background: '#F7F8FA' }}>
 
         {/* ── Toolbar ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ position: 'relative', width: 260 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
             <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               value={search}
@@ -606,13 +606,6 @@ export function PeoplePage() {
               </button>
             )}
           </div>
-          <div style={{ marginLeft: 'auto' }}>
-            <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
-          </div>
-        </div>
-
-        {/* ── Filters ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           <MultiFilterSelect
             label="All clients"
             selected={filterClients}
@@ -649,6 +642,8 @@ export function PeoplePage() {
               <X width={11} height={11} /> Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
             </button>
           )}
+          <div style={{ flex: 1 }} />
+          <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
         </div>
 
         {/* ── Table ── */}

@@ -300,6 +300,8 @@ export function TasksPage() {
             ...PROJECTS.map(p => ({ value: p.id, label: p.name })),
           ]} />
 
+          <div style={{ flex: 1 }} />
+
           {/* view toggle */}
           <div style={{ display: 'flex', border: '1px solid #E5E7EB', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}>
             {(['kanban', 'table'] as ViewMode[]).map(v => (
@@ -319,7 +321,7 @@ export function TasksPage() {
             <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
           )}
 
-          <button onClick={() => setCreatingNew(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#6C63FF', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto', flexShrink: 0 }}>
+          <button onClick={() => setCreatingNew(true)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#6C63FF', color: '#fff', border: 'none', borderRadius: 8, fontWeight: 700, fontSize: 13.5, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
             <Plus width={16} height={16} /> New Task
           </button>
         </div>

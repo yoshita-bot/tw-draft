@@ -825,30 +825,17 @@ export function ProjectsPage() {
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px', background: '#F7F8FA' }}>
 
-        {/* ── Toolbar row 1: search + actions ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+        {/* ── Toolbar ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
+          <div style={{ position: 'relative', width: 260, flexShrink: 0 }}>
             <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
               placeholder="Search by name or client…"
-              style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#111827' }}
+              style={{ width: '100%', padding: '8px 10px 8px 30px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff', color: '#111827', boxSizing: 'border-box' }}
             />
           </div>
-          <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
-            <button
-              onClick={() => setModal({ mode: 'add' })}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#6C63FF', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-            >
-              <Plus width={14} height={14} /> Add Project
-            </button>
-          </div>
-        </div>
-
-        {/* ── Toolbar row 2: filters ── */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           <FilterSelect
             label="All clients"
             value={filterClient}
@@ -875,6 +862,14 @@ export function ProjectsPage() {
               <X width={11} height={11} /> Clear {activeFilters} filter{activeFilters > 1 ? 's' : ''}
             </button>
           )}
+          <div style={{ flex: 1 }} />
+          <ColumnManager cols={colOrder} visible={visibleCols} onToggle={toggleCol} onReorder={setColOrder} />
+          <button
+            onClick={() => setModal({ mode: 'add' })}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#6C63FF', color: '#fff', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            <Plus width={14} height={14} /> Add Project
+          </button>
         </div>
 
         {/* ── Table ── */}
