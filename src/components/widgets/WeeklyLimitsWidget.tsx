@@ -3,7 +3,7 @@ import { WEEKLY_LIMITS } from '../../data/dashboardData'
 import { avatarStyle, initials } from '../../utils/avatar'
 import { ROUTES } from '../../lib/routes'
 
-export function WeeklyLimitsWidget() {
+export function WeeklyLimitsWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   const sorted = [...WEEKLY_LIMITS].sort((a, b) => (b.used / b.cap) - (a.used / a.cap))
 
   let nCritical = 0, nWarning = 0, nSafe = 0
@@ -18,7 +18,7 @@ export function WeeklyLimitsWidget() {
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Weekly limits</span>
-        <Link to={ROUTES.settings} className="widget-link">Manage limits →</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={ROUTES.settings} className="widget-link">Manage limits →</Link>{gripNode}</div>
       </div>
 
       <div className="wl-stats">
@@ -28,7 +28,7 @@ export function WeeklyLimitsWidget() {
       </div>
 
       <div>
-        {sorted.map((p) => {
+        {sorted.slice(0, 5).map((p) => {
           const pct     = p.used / p.cap
           const pctDisp = Math.round(pct * 100)
           const rem     = p.cap - p.used

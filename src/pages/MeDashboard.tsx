@@ -1,7 +1,11 @@
 import { useState, useRef } from 'react'
 import { GripVertical, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { ManageWidgetsDrawer } from '../components/ManageWidgetsDrawer'
+import { SmallWidget } from '../components/widgets/SmallWidget'
+import { ScreenshotImage } from './ActivityPage'
 import { ME } from '../data/meMockData'
+import { ROUTES } from '../lib/routes'
 
 // ─── widget definitions ──────────────────────────────────────────────────────
 
@@ -61,143 +65,7 @@ function statusDot(status: string) {
 
 // ─── small widgets ────────────────────────────────────────────────────────────
 
-const SW_CARD: import('react').CSSProperties = {
-  background: '#fff',
-  border: '1px solid #E5E7EB',
-  borderRadius: 10,
-  padding: '12px 14px',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 0,
-  minWidth: 0,
-}
-
-function HoursWorkedTodaySmall() {
-  const { todayStats } = ME
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Hours Worked</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{fmtH(todayStats.hoursWorked)}</div>
-    </div>
-  )
-}
-
-function HoursWorkedWeekSmall() {
-  const { thisWeek } = ME
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Hours Worked</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>{thisWeek.hoursWorked}<span style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}> hrs</span></div>
-    </div>
-  )
-}
-
-function ActivityRateTodaySmall() {
-  const today = ME.todayStats.activityRate
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Activity Rate</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: actColor(today), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{today}%</div>
-    </div>
-  )
-}
-
-function ActivityRateWeekSmall() {
-  const week = ME.thisWeek.activityRate
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Activity Rate</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Weekly avg</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: actColor(week), letterSpacing: '-0.5px', lineHeight: 1.1 }}>{week}%</div>
-    </div>
-  )
-}
-
-function EarningsTodaySmall() {
-  const { todayStats } = ME
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Earnings</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>Today</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${todayStats.earnings.toFixed(2)}</div>
-    </div>
-  )
-}
-
-function EarningsWeekSmall() {
-  const { thisWeek } = ME
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Earnings</div>
-      <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 3 }}>This week</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: '#111827', letterSpacing: '-0.5px', lineHeight: 1.1 }}>${thisWeek.earnings.toFixed(2)}</div>
-    </div>
-  )
-}
-
-function WeeklyLimitSmall() {
-  const { hoursWorked, cap } = ME.thisWeek
-  const pct = Math.min(100, Math.round((hoursWorked / cap) * 100))
-  const remaining = Math.max(0, cap - hoursWorked)
-  const isNear = pct >= 90
-  const barColor = isNear ? '#EF4444' : '#6C63FF'
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Weekly Limit</div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: isNear ? '#EF4444' : '#111827', lineHeight: 1.1 }}>{hoursWorked} <span style={{ fontSize: 13, fontWeight: 500, color: '#6B7280' }}>/ {cap} hrs</span></span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: barColor }}>{pct}%</span>
-      </div>
-      <div style={{ height: 6, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden', marginBottom: 7 }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: barColor, borderRadius: 99 }} />
-      </div>
-      <div style={{ fontSize: 11, color: isNear ? '#EF4444' : '#9CA3AF' }}>
-        {remaining > 0 ? `${fmtH(remaining)} remaining` : 'Limit reached'}
-      </div>
-    </div>
-  )
-}
-
-function ProjectsWorkedSmall() {
-  const projects = ME.projects
-  return (
-    <div style={SW_CARD}>
-      <div style={{ fontSize: 10.5, fontWeight: 600, color: '#9CA3AF', marginBottom: 10, letterSpacing: '0.04em', textTransform: 'uppercase' }}>Projects Worked</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1, justifyContent: 'center' }}>
-        {projects.map(p => (
-          <div key={p.id}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, minWidth: 0 }}>
-                <div style={{ width: 7, height: 7, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-                <span style={{ fontSize: 11.5, fontWeight: 500, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</span>
-              </div>
-              <span style={{ fontSize: 11, fontWeight: 600, color: '#6B7280', flexShrink: 0, marginLeft: 6 }}>{fmtH(p.hoursThisWeek)}</span>
-            </div>
-            <div style={{ height: 4, background: '#F3F4F6', borderRadius: 99, overflow: 'hidden' }}>
-              <div style={{ height: '100%', width: `${p.progress}%`, background: p.color, borderRadius: 99 }} />
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-function SmallWidgetById({ id }: { id: string }) {
-  switch (id) {
-    case 'me-sw-hours-today':    return <HoursWorkedTodaySmall />
-    case 'me-sw-hours-week':     return <HoursWorkedWeekSmall />
-    case 'me-sw-activity-today': return <ActivityRateTodaySmall />
-    case 'me-sw-activity-week':  return <ActivityRateWeekSmall />
-    case 'me-sw-earnings-today': return <EarningsTodaySmall />
-    case 'me-sw-earnings-week':  return <EarningsWeekSmall />
-    default: return null
-  }
-}
+const ME_SW_MAP = Object.fromEntries(ME.smallWidgets.map(w => [w.id, w]))
 
 // ─── My Timesheet ─────────────────────────────────────────────────────────────
 
@@ -219,13 +87,13 @@ function MyTimesheetWidget() {
     <div>
       {/* Week navigation */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-        <button onClick={() => setWeekOffset(w => w - 1)} style={{ border: 'none', background: '#F3F4F6', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}>
+        <button onClick={() => setWeekOffset(w => w - 1)} className="me-week-nav-btn" style={{ border: 'none', background: '#F3F4F6', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#6B7280' }}>
           <ChevronLeft size={14} />
         </button>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>
           {weekOffset === 0 ? 'This week' : weekLabel} · {week[0].date.slice(0,7).replace('-', '/')}
         </span>
-        <button onClick={() => setWeekOffset(w => Math.min(0, w + 1))} style={{ border: 'none', background: weekOffset === 0 ? '#F9FAFB' : '#F3F4F6', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', color: weekOffset === 0 ? '#D1D5DB' : '#6B7280' }}>
+        <button onClick={() => setWeekOffset(w => Math.min(0, w + 1))} className="me-week-nav-btn" style={{ border: 'none', background: weekOffset === 0 ? '#F9FAFB' : '#F3F4F6', borderRadius: 6, width: 26, height: 26, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: weekOffset === 0 ? 'not-allowed' : 'pointer', color: weekOffset === 0 ? '#D1D5DB' : '#6B7280' }}>
           <ChevronRight size={14} />
         </button>
       </div>
@@ -267,9 +135,9 @@ function MyTimesheetWidget() {
           { label: 'Week earned',      value: `$${totalEarnings.toFixed(2)}` },
           { label: 'Avg / day',        value: fmtH(avgPerDay)            },
         ].map(p => (
-          <div key={p.label} style={{ flex: 1, background: '#F5F3FF', borderRadius: 8, padding: '7px 10px', textAlign: 'center' }}>
-            <div style={{ fontSize: 13, fontWeight: 700, color: '#4F46E5' }}>{p.value}</div>
-            <div style={{ fontSize: 10, color: '#7C3AED', marginTop: 1 }}>{p.label}</div>
+          <div key={p.label} className="me-ts-pill" style={{ flex: 1, background: '#F5F3FF', borderRadius: 8, padding: '7px 10px', textAlign: 'center' }}>
+            <div className="me-ts-pill-val" style={{ fontSize: 13, fontWeight: 700, color: '#4F46E5' }}>{p.value}</div>
+            <div className="me-ts-pill-lbl" style={{ fontSize: 10, color: '#7C3AED', marginTop: 1 }}>{p.label}</div>
           </div>
         ))}
       </div>
@@ -283,7 +151,7 @@ function MyTimesheetWidget() {
           <div style={{ fontSize: 12, color: '#D1D5DB', textAlign: 'center', padding: '12px 0' }}>No entries recorded</div>
         ) : entries.map((e, i) => (
           <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: i < entries.length - 1 ? '1px solid #F9F9F9' : 'none' }}>
-            <div style={{ width: 3, height: 24, borderRadius: 99, background: e.idle ? '#FDE68A' : '#6C63FF', flexShrink: 0 }} />
+            <div className={e.idle ? '' : 'me-entry-bar-active'} style={{ width: 3, height: 24, borderRadius: 99, background: e.idle ? '#FDE68A' : '#6C63FF', flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12.5, fontWeight: 500, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.project}</div>
               <div style={{ fontSize: 10.5, color: '#9CA3AF' }}>{fmtClock(e.start)} – {fmtClock(e.end)}</div>
@@ -298,6 +166,9 @@ function MyTimesheetWidget() {
           </div>
         ))}
       </div>
+      <Link to={ROUTES.timesheets} style={{ display: 'block', marginTop: 14, textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#6271FF', textDecoration: 'none', padding: '8px', borderRadius: 8, border: '1px solid rgba(98,113,255,.25)', background: 'rgba(98,113,255,.04)' }}>
+        View full timesheet →
+      </Link>
     </div>
   )
 }
@@ -340,11 +211,14 @@ function MyWorkWidget() {
           </div>
 
           {/* Add task */}
-          <button style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11.5, color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontWeight: 500 }}>
+          <button className="me-add-task-btn" style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 6, fontSize: 11.5, color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer', padding: '2px 0', fontWeight: 500 }}>
             <Plus size={12} /> Add task
           </button>
         </div>
       ))}
+      <Link to={ROUTES.todos} style={{ display: 'block', marginTop: 14, textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#6271FF', textDecoration: 'none', padding: '8px', borderRadius: 8, border: '1px solid rgba(98,113,255,.25)', background: 'rgba(98,113,255,.04)' }}>
+        View all tasks →
+      </Link>
     </div>
   )
 }
@@ -356,11 +230,11 @@ function TimeOffWidget() {
     <div>
       {/* My leave requests */}
       <div style={{ marginBottom: 18 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>My Leave</div>
+        <div className="me-sub-label" style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>My Leave</div>
         {ME.myLeave.length === 0 ? (
           <div style={{ fontSize: 12, color: '#D1D5DB' }}>No upcoming leave</div>
         ) : ME.myLeave.map(l => (
-          <div key={l.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 6 }}>
+          <div key={l.id} className="me-leave-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: '#F9FAFB', border: '1px solid #E5E7EB', marginBottom: 6 }}>
             <div>
               <div style={{ fontSize: 12.5, fontWeight: 600, color: '#111827' }}>{l.type}</div>
               <div style={{ fontSize: 11, color: '#9CA3AF' }}>{fmtDate(l.start)} – {fmtDate(l.end)} · {l.days}d</div>
@@ -378,70 +252,100 @@ function TimeOffWidget() {
 
       {/* Public holidays */}
       <div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Public Holidays</div>
+        <div className="me-sub-label" style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>Public Holidays</div>
         {ME.publicHolidays.map((h, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < ME.publicHolidays.length - 1 ? '1px solid #F5F5F5' : 'none' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{ width: 3, height: 24, borderRadius: 99, background: '#6C63FF', flexShrink: 0 }} />
+              <div className="me-holiday-bar" style={{ width: 3, height: 24, borderRadius: 99, background: '#6C63FF', flexShrink: 0 }} />
               <span style={{ fontSize: 12.5, color: '#374151', fontWeight: 500 }}>{h.name}</span>
             </div>
             <span style={{ fontSize: 11.5, color: '#9CA3AF' }}>{fmtDate(h.date)}</span>
           </div>
         ))}
       </div>
+      <Link to={ROUTES.myTimeOff} style={{ display: 'block', marginTop: 14, textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#6271FF', textDecoration: 'none', padding: '8px', borderRadius: 8, border: '1px solid rgba(98,113,255,.25)', background: 'rgba(98,113,255,.04)' }}>
+        Manage time off →
+      </Link>
     </div>
   )
 }
 
 // ─── Recent Activity ──────────────────────────────────────────────────────────
 
+function MeScreenshotCard({ s }: { s: typeof ME.screenshots[0] }) {
+  const [hovered, setHovered] = useState(false)
+  const color = actColor(s.activity)
+  return (
+    <div
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        background: '#fff',
+        border: `1px solid ${hovered ? '#C7C3FF' : '#E8E8E8'}`,
+        borderRadius: 10, overflow: 'hidden', cursor: 'pointer',
+        boxShadow: hovered ? '0 4px 16px rgba(108,99,255,0.10)' : '0 1px 4px rgba(0,0,0,0.04)',
+        transition: 'border-color 0.15s, box-shadow 0.15s',
+      }}
+    >
+      {/* Project chip */}
+      <div style={{ padding: '7px 10px 5px' }}>
+        <span style={{
+          fontSize: 10.5, fontWeight: 700, color: s.hue,
+          background: `${s.hue}18`, padding: '2px 8px', borderRadius: 99,
+          display: 'inline-block', whiteSpace: 'nowrap', overflow: 'hidden',
+          textOverflow: 'ellipsis', maxWidth: '100%',
+        }}>{s.project}</span>
+      </div>
+
+      {/* Screenshot */}
+      <div style={{ position: 'relative' }}>
+        <ScreenshotImage
+          seed={s.seed}
+          width={320} height={200}
+          style={{ width: '100%', height: 'auto', display: 'block' }}
+        />
+        {hovered && (
+          <div style={{
+            position: 'absolute', inset: 0, background: 'rgba(108,99,255,0.08)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <div style={{ background: 'rgba(108,99,255,0.85)', color: '#fff', borderRadius: 7, padding: '5px 12px', fontSize: 11.5, fontWeight: 600 }}>
+              View screenshot
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: '6px 10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6B7280' }}>{fmtClock(s.time)}</span>
+        <span style={{
+          fontSize: 10.5, fontWeight: 700, padding: '2px 7px', borderRadius: 99, color: '#fff',
+          background: color,
+        }}>{s.activity}%</span>
+      </div>
+    </div>
+  )
+}
+
 function RecentActivityWidget() {
   const shots = ME.screenshots
   return (
     <div>
       <div style={{ fontSize: 11, color: '#9CA3AF', marginBottom: 12 }}>{shots.length} screenshots today · Yoshita Jeswal</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-        {shots.map(s => {
-          const color = actColor(s.activity)
-          return (
-            <div key={s.id} style={{ borderRadius: 8, overflow: 'hidden', border: '1px solid #E5E7EB', cursor: 'pointer', transition: 'box-shadow 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.10)')}
-              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
-            >
-              {/* Thumbnail placeholder */}
-              <div style={{ height: 58, background: `linear-gradient(135deg, ${s.hue}22, ${s.hue}11)`, position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {/* Simulated screen content */}
-                <div style={{ width: '80%', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                  <div style={{ height: 5, background: `${s.hue}55`, borderRadius: 2, width: '100%' }} />
-                  <div style={{ height: 4, background: `${s.hue}33`, borderRadius: 2, width: '75%' }} />
-                  <div style={{ height: 4, background: `${s.hue}22`, borderRadius: 2, width: '90%' }} />
-                  <div style={{ height: 4, background: `${s.hue}33`, borderRadius: 2, width: '60%' }} />
-                </div>
-                {/* Activity badge */}
-                <div style={{
-                  position: 'absolute', top: 5, right: 5,
-                  background: color, color: '#fff',
-                  fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 99,
-                }}>
-                  {s.activity}%
-                </div>
-              </div>
-              {/* Caption */}
-              <div style={{ padding: '5px 7px', background: '#fff' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{s.project}</div>
-                <div style={{ fontSize: 9.5, color: '#9CA3AF' }}>{fmtClock(s.time)}</div>
-              </div>
-            </div>
-          )
-        })}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+        {shots.slice(0, 6).map(s => <MeScreenshotCard key={s.id} s={s} />)}
       </div>
+      <Link to={ROUTES.activityScreenshots} style={{ display: 'block', marginTop: 14, textAlign: 'center', fontSize: 12, fontWeight: 600, color: '#6271FF', textDecoration: 'none', padding: '8px', borderRadius: 8, border: '1px solid rgba(98,113,255,.25)', background: 'rgba(98,113,255,.04)' }}>
+        View all screenshots →
+      </Link>
     </div>
   )
 }
 
 // ─── large widget dispatcher ──────────────────────────────────────────────────
 
-function WidgetContent({ id }: { id: string }) {
+export function WidgetContent({ id }: { id: string }) {
   switch (id) {
     case 'me-lw-timesheet': return <MyTimesheetWidget />
     case 'me-lw-work':      return <MyWorkWidget />
@@ -507,10 +411,11 @@ export function MeDashboard() {
       </div>
 
       {/* Small widget bar */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-        {ME_SMALL_WIDGETS.filter(w => smallVisible.has(w.id)).map(w => (
-          <SmallWidgetById key={w.id} id={w.id} />
-        ))}
+      <div className="small-widgets-zone">
+        {ME_SMALL_WIDGETS.map(w => {
+          const d = ME_SW_MAP[w.id]
+          return d ? <SmallWidget key={w.id} {...d} visible={smallVisible.has(w.id)} /> : null
+        })}
       </div>
 
       {/* Large widgets */}

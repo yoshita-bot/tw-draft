@@ -30,9 +30,9 @@ const { empCount, projectCount } = buildClientStats()
 // ── Badge helpers ─────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<ClientStatus, { bg: string; color: string; dot: string; label: string }> = {
-  active:     { bg: '#DCFCE7', color: '#16A34A', dot: '#16A34A', label: 'Active' },
+  active:     { bg: '#DCFCE7', color: '#15803D', dot: '#16A34A', label: 'Active' },
   inactive:   { bg: '#F3F4F6', color: '#6B7280', dot: '#9CA3AF', label: 'Inactive' },
-  onboarding: { bg: '#FEF9C3', color: '#A16207', dot: '#CA8A04', label: 'Onboarding' },
+  onboarding: { bg: '#FEF3C7', color: '#92400E', dot: '#CA8A04', label: 'Onboarding' },
 }
 
 function StatusBadge({ status }: { status: ClientStatus }) {
@@ -145,8 +145,9 @@ export function ClientsPage() {
   }
 
   const thStyle = (colKey: SortKey): React.CSSProperties => ({
-    padding: '12px 14px', textAlign: 'left', fontSize: 11.5, fontWeight: 600,
-    color: '#6B7280', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap',
+    padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700,
+    textTransform: 'uppercase', letterSpacing: '0.05em',
+    color: '#9CA3AF', cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap',
     verticalAlign: 'middle',
   })
 
@@ -161,8 +162,8 @@ export function ClientsPage() {
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 7,
-          background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 8,
-          padding: '7px 11px', minWidth: 220,
+          background: '#F9FAFB', border: '1px solid #E8E8E8', borderRadius: 8,
+          padding: '7px 11px', width: 260, boxSizing: 'border-box',
         }}>
           <Search width={14} height={14} color="#9CA3AF" />
           <input
@@ -199,7 +200,7 @@ export function ClientsPage() {
           onClick={() => setAddingClient(true)}
           style={{
             display: 'flex', alignItems: 'center', gap: 6,
-            padding: '7px 14px', borderRadius: 8, border: 'none',
+            padding: '8px 16px', borderRadius: 8, border: 'none',
             background: '#6C63FF', color: '#fff', cursor: 'pointer',
             fontSize: 13, fontWeight: 600, fontFamily: 'inherit',
           }}
@@ -223,7 +224,7 @@ export function ClientsPage() {
             <col style={{ width: '22%' }} />
           </colgroup>
           <thead>
-            <tr style={{ position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
+            <tr style={{ position: 'sticky', top: 0, background: '#FAFAFA', zIndex: 2 }}>
               <th style={{ ...thStyle('name'), paddingLeft: 14, borderBottom: '1px solid #F3F4F6' }}
                 onClick={() => toggleSort('name')}>
                 Client <SortArrow colKey="name" />
@@ -244,7 +245,7 @@ export function ClientsPage() {
                 onClick={() => toggleSort('projects')}>
                 Projects <SortArrow colKey="projects" />
               </th>
-              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#6B7280', borderBottom: '1px solid #F3F4F6', verticalAlign: 'middle' }}>
+              <th style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#9CA3AF', borderBottom: '1px solid #F3F4F6', verticalAlign: 'middle' }}>
                 Timezone
               </th>
               <th style={{ ...thStyle('thisMonth'), borderBottom: '1px solid #F3F4F6' }}
@@ -256,7 +257,7 @@ export function ClientsPage() {
           <tbody>
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} style={{ textAlign: 'center', padding: '48px 0', color: '#9CA3AF', fontSize: 14 }}>
+                <td colSpan={7} style={{ textAlign: 'center', padding: '48px 0', color: '#9CA3AF', fontSize: 13 }}>
                   No clients match your filters.
                 </td>
               </tr>

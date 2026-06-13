@@ -8,6 +8,7 @@ import {
   SlidersHorizontal, ExternalLink,
 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
+import { avatarStyle, initials } from '../utils/avatar'
 
 // ─────────────────────────────────────────────────────────────
 //  TYPES
@@ -268,13 +269,14 @@ const INITIAL_ENTRIES: TimeEntry[] = [
 // ─────────────────────────────────────────────────────────────
 
 function Avatar({ w, size = 32 }: { w: Worker; size?: number }) {
+  const a = avatarStyle(w.name)
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: w.bg, color: w.color,
+      background: a.bg, color: a.color,
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.36, fontWeight: 700,
-    }}>{w.initials}</div>
+    }}>{initials(w.name)}</div>
   )
 }
 
@@ -384,13 +386,13 @@ function EntryDetails({ entry, colSpan }: { entry: TimeEntry; colSpan: number })
     <tr><td colSpan={colSpan} style={{ padding: '10px 24px 14px 72px', background: '#FAFAFA', borderBottom: '1px solid #F0F0F0' }}>
       {hasNotes && (
         <div style={{ marginBottom: hasLog ? 10 : 0 }}>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 3 }}>Note</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 3 }}>Note</div>
           <div style={{ fontSize: 12.5, color: '#374151' }}>{entry.notes}</div>
         </div>
       )}
       {hasLog && (
         <>
-          <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Edit history</div>
+          <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Edit history</div>
           {entry.edit_log.map(log => (
             <div key={log.id} style={{ display: 'flex', gap: 8, fontSize: 12, marginBottom: 6 }}>
               <div style={{ width: 5, height: 5, borderRadius: '50%', background: '#6C63FF', marginTop: 5, flexShrink: 0 }} />
@@ -455,14 +457,14 @@ function EntryModal({ init, workers, entries, onSave, onClose }: {
   const overCap = projected > WEEKLY_CAP
   const worker = workers.find(w => w.id === f.workerId)
 
-  const inp: React.CSSProperties = { width: '100%', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff' }
+  const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.28)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.4)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: 12, width: 480, maxHeight: '88vh', overflow: 'auto', boxShadow: '0 16px 48px rgba(0,0,0,0.16)' }}>
-        <div style={{ padding: '18px 22px 14px', borderBottom: '1px solid #E8E8E8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 480, maxHeight: '88vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
+        <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid #E8E8E8', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 600, color: '#111827' }}>{isEdit ? 'Edit entry' : 'Add time'}</div>
             {isEdit && f.orig_activity_rate !== undefined && (
@@ -479,7 +481,7 @@ function EntryModal({ init, workers, entries, onSave, onClose }: {
             <div><label style={lbl}>End</label><input type="time" value={f.end} onChange={e => onEnd(e.target.value)} style={inp} /></div>
             <div><label style={lbl}>Duration</label><input value={f.durStr} onChange={e => onDur(e.target.value)} placeholder="1h 30m" style={inp} /></div>
           </div>
-          {calcDur > 0 && <div style={{ fontSize: 12, color: '#6C63FF', background: '#F5F3FF', padding: '5px 10px', borderRadius: 6, marginBottom: 12 }}>{fmtDur(calcDur)} · Week total: <strong style={{ color: overCap ? '#EF4444' : 'inherit' }}>{fmtDur(projected)}</strong> / 40h</div>}
+          {calcDur > 0 && <div style={{ fontSize: 12, color: '#6C63FF', background: '#EEEDFF', padding: '5px 10px', borderRadius: 6, marginBottom: 12 }}>{fmtDur(calcDur)} · Week total: <strong style={{ color: overCap ? '#EF4444' : 'inherit' }}>{fmtDur(projected)}</strong> / 40h</div>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <div><label style={lbl}>Project</label><select value={f.project} onChange={e => upd('project', e.target.value)} style={inp}><option value="">— none —</option>{PROJECTS.map(p => <option key={p} value={p}>{p}</option>)}</select></div>
             <div><label style={lbl}>Type</label><select value={f.entry_type} onChange={e => upd('entry_type', e.target.value as EntryType)} style={inp}><option value="normal">Normal</option><option value="idle">Idle</option></select></div>
@@ -490,11 +492,11 @@ function EntryModal({ init, workers, entries, onSave, onClose }: {
             <label htmlFor="bill" style={{ fontSize: 13, color: '#374151', cursor: 'pointer' }}>Billable</label>
           </div>
           <div style={{ marginBottom: isEdit ? 12 : 0 }}><label style={lbl}>Notes</label><textarea rows={2} value={f.notes} onChange={e => upd('notes', e.target.value)} placeholder="Optional…" style={{ ...inp, resize: 'vertical' }} /></div>
-          {isEdit && <div><label style={lbl}>Reason for edit <span style={{ color: '#EF4444' }}>*</span></label><input value={f.editReason} onChange={e => upd('editReason', e.target.value)} placeholder="Why was this entry changed?" style={{ ...inp, borderColor: !f.editReason ? '#FCA5A5' : '#E5E7EB' }} /></div>}
+          {isEdit && <div><label style={lbl}>Reason for edit <span style={{ color: '#EF4444' }}>*</span></label><input value={f.editReason} onChange={e => upd('editReason', e.target.value)} placeholder="Why was this entry changed?" style={{ ...inp, borderColor: !f.editReason ? '#FCA5A5' : '#E8E8E8' }} /></div>}
         </div>
         <div style={{ padding: '12px 22px', borderTop: '1px solid #E8E8E8', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '7px 16px', border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280' }}>Cancel</button>
-          <button onClick={() => onSave(f)} disabled={isEdit && !f.editReason} style={{ padding: '7px 18px', border: 'none', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: isEdit && !f.editReason ? 'not-allowed' : 'pointer', background: isEdit && !f.editReason ? '#E5E7EB' : '#6C63FF', color: '#fff' }}>{isEdit ? 'Save changes' : 'Add time'}</button>
+          <button onClick={onClose} style={{ padding: '8px 14px', border: '1px solid #D1D5DB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 500, color: '#374151' }}>Cancel</button>
+          <button onClick={() => onSave(f)} disabled={isEdit && !f.editReason} style={{ padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: isEdit && !f.editReason ? 'not-allowed' : 'pointer', background: isEdit && !f.editReason ? '#E5E7EB' : '#6C63FF', color: isEdit && !f.editReason ? '#9CA3AF' : '#fff' }}>{isEdit ? 'Save changes' : 'Add time'}</button>
         </div>
       </div>
     </div>
@@ -518,9 +520,9 @@ interface SplitState {
 function TimeField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-      <span style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</span>
+      <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{label}</span>
       <input type="time" value={value} onChange={e => onChange(e.target.value)}
-        style={{ padding: '9px 13px', border: '1.5px solid #E5E7EB', borderRadius: 9, fontSize: 15, fontWeight: 600, color: '#111827', background: '#fff', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }} />
+        style={{ padding: '9px 13px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 15, fontWeight: 600, color: '#111827', background: '#fff', outline: 'none', fontFamily: 'inherit', cursor: 'pointer' }} />
     </div>
   )
 }
@@ -585,7 +587,7 @@ function SplitModal({ entry, worker, onSave, onClose }: {
   const endPct   = barSplitEnd
 
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 }
-  const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
+  const inp: React.CSSProperties = { width: '100%', padding: '8px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
 
   // Segment rows for the bar legend
   const segs = [
@@ -595,12 +597,12 @@ function SplitModal({ entry, worker, onSave, onClose }: {
   ]
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.32)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(17,24,39,0.4)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.18)' }}>
 
         {/* Header */}
-        <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #F0F0F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ padding: '18px 20px 16px', borderBottom: '1px solid #E8E8E8', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ fontSize: 16, fontWeight: 700, color: '#111827' }}>Split time</div>
           <button onClick={onClose} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: 22, color: '#9CA3AF', lineHeight: 1, padding: 0 }}>×</button>
         </div>
@@ -609,14 +611,14 @@ function SplitModal({ entry, worker, onSave, onClose }: {
         <div style={{ margin: '16px 24px 0', padding: '14px 16px', border: '1px solid #E8E8E8', borderRadius: 10, background: '#FAFAFA' }}>
           <div style={{ display: 'flex', gap: 32, marginBottom: 10 }}>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Member</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Member</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <Avatar w={worker} size={26} />
                 <span style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{worker.name}</span>
               </div>
             </div>
             <div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Project</div>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 6 }}>Project</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <div style={{ width: 26, height: 26, borderRadius: '50%', background: worker.bg, color: worker.color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700 }}>
                   {(entry.project || 'N').charAt(0)}
@@ -626,7 +628,7 @@ function SplitModal({ entry, worker, onSave, onClose }: {
             </div>
           </div>
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Time Span</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 4 }}>Time Span</div>
             <div style={{ fontSize: 13, color: '#374151' }}>
               from <strong>{fmtClock(entry.start)}</strong> to <strong>{fmtClock(entry.end)}</strong>
               <span style={{ color: '#9CA3AF', marginLeft: 8 }}>{fmtDur(entry.duration)}</span>
@@ -657,7 +659,7 @@ function SplitModal({ entry, worker, onSave, onClose }: {
             <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 700, paddingBottom: 11 }}>TO</span>
             <TimeField label="To" value={f.splitEnd} onChange={onSplitEnd} />
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Duration</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Duration</span>
               <input value={f.splitDurStr} onChange={e => onSplitDur(e.target.value)} placeholder="1h 30m"
                 style={{ ...inp, fontSize: 15, fontWeight: 600, padding: '9px 12px' }} />
             </div>
@@ -692,7 +694,7 @@ function SplitModal({ entry, worker, onSave, onClose }: {
                   transform: 'translateX(-50%)',
                   top: 6,
                   background: '#fff',
-                  border: '1px solid #E5E7EB',
+                  border: '1px solid #E8E8E8',
                   borderRadius: 8,
                   padding: '4px 12px',
                   fontSize: 13, fontWeight: 600, color: '#374151',
@@ -756,9 +758,9 @@ function SplitModal({ entry, worker, onSave, onClose }: {
 
         {/* Footer */}
         <div style={{ padding: '12px 24px', borderTop: '1px solid #F0F0F0', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-          <button onClick={onClose} style={{ padding: '8px 18px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280', fontWeight: 500 }}>Cancel</button>
+          <button onClick={onClose} style={{ padding: '8px 14px', border: '1px solid #D1D5DB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#374151', fontWeight: 500 }}>Cancel</button>
           <button onClick={() => valid && onSave(f, tab)} disabled={!valid}
-            style={{ padding: '8px 22px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? (tab === 'delete' ? '#EF4444' : '#6C63FF') : '#E5E7EB', color: valid ? '#fff' : '#9CA3AF' }}>
+            style={{ padding: '8px 16px', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: valid ? 'pointer' : 'not-allowed', background: valid ? (tab === 'delete' ? '#EF4444' : '#6C63FF') : '#E5E7EB', color: valid ? '#fff' : '#9CA3AF' }}>
             {tab === 'delete' ? 'Delete time' : 'Save'}
           </button>
         </div>
@@ -806,7 +808,7 @@ function CellPopover({ cellEntries, worker, anchorRect, onEdit, onSplit, onDelet
       <div style={{
         position: 'fixed', zIndex: 901,
         top, left, width: popWidth,
-        background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10,
+        background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10,
         boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
         overflow: 'hidden',
       }}>
@@ -825,22 +827,22 @@ function CellPopover({ cellEntries, worker, anchorRect, onEdit, onSplit, onDelet
                 </div>
                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                   {e.billable && !isIdle && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: '#059669', background: '#ECFDF5', border: '1px solid #6EE7B7', borderRadius: 4, padding: '2px 7px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11.5, fontWeight: 600, color: '#15803D', background: '#DCFCE7', borderRadius: 99, padding: '3px 10px' }}>
                       <DollarSign width={10} height={10} /> Billable
                     </span>
                   )}
                   {!e.billable && !isIdle && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#9CA3AF', background: '#F9FAFB', border: '1px solid #E5E7EB', borderRadius: 4, padding: '2px 7px' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', borderRadius: 99, padding: '3px 10px' }}>
                       Non-billable
                     </span>
                   )}
                   {(e.is_manual || e.is_manual_edit) && (
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11, fontWeight: 600, color: '#D97706', background: '#FFF7ED', border: '1px solid #FDE68A', borderRadius: 4, padding: '2px 7px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 11.5, fontWeight: 600, color: '#92400E', background: '#FEF3C7', borderRadius: 99, padding: '3px 10px' }}>
                       <PenLine width={10} height={10} /> Manual
                     </span>
                   )}
                   {isIdle && (
-                    <span style={{ fontSize: 11, fontWeight: 600, color: '#B45309', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 4, padding: '2px 7px' }}>
+                    <span style={{ fontSize: 11.5, fontWeight: 600, color: '#92400E', background: '#FEF3C7', borderRadius: 99, padding: '3px 10px' }}>
                       Idle
                     </span>
                   )}
@@ -933,7 +935,7 @@ function WeeklyGrid({
         <div style={{ fontSize: 12, color: '#9CA3AF' }}>{fmtWeekRange()}</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <IconBtn title="Export"><Download width={14} height={14} /></IconBtn>
-          <button onClick={onAddTime} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: 'none', borderRadius: 7, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <button onClick={onAddTime} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', border: 'none', borderRadius: 8, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
             <Plus width={13} height={13} /> Add time
           </button>
         </div>
@@ -998,7 +1000,7 @@ function WeeklyGrid({
                         }}
                         style={{
                           ...cellStyle,
-                          background: isOpen ? '#F5F3FF' : isWeekend ? '#FAFAFA' : '#fff',
+                          background: isOpen ? '#EEEDFF' : isWeekend ? '#FAFAFA' : '#fff',
                           color: mins > 0 ? (isOpen ? '#6C63FF' : '#374151') : '#D1D5DB',
                           cursor: mins > 0 ? 'pointer' : 'default',
                           transition: 'background 0.1s',
@@ -1301,7 +1303,7 @@ export function TimesheetsPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px', background: '#F7F8FA' }}>
 
         {/* ── TOOLBAR ── */}
-        <div style={{ marginBottom: 16, background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.04)', overflow: 'hidden' }}>
+        <div style={{ marginBottom: 16, background: '#fff', border: '1px solid #E8E8E8', borderRadius: 10, boxShadow: '0 1px 3px rgba(0,0,0,0.06)', overflow: 'hidden' }}>
 
           {/* Row 1: Date nav · View tabs · spacer · Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 0, padding: '8px 14px', borderBottom: viewTab === 'daily' ? '1px solid #F3F4F6' : 'none' }}>
@@ -1322,10 +1324,10 @@ export function TimesheetsPage() {
               </div>
               <NavBtn onClick={navForward}><ChevronRight width={14} height={14} /></NavBtn>
               {viewTab === 'daily' && (
-                <button onClick={goToToday} style={{ padding: '4px 10px', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#6C63FF', background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>Today</button>
+                <button onClick={goToToday} style={{ padding: '4px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#6C63FF', background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>Today</button>
               )}
               {viewTab === 'weekly' && (
-                <button onClick={goToThisWeek} style={{ padding: '4px 10px', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 12, fontWeight: 600, color: '#6C63FF', background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>This week</button>
+                <button onClick={goToThisWeek} style={{ padding: '4px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 12, fontWeight: 600, color: '#6C63FF', background: 'transparent', cursor: 'pointer', whiteSpace: 'nowrap' }}>This week</button>
               )}
             </div>
 
@@ -1346,12 +1348,12 @@ export function TimesheetsPage() {
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {viewTab === 'daily' && <IconBtn title="Export CSV"><Download width={15} height={15} /></IconBtn>}
               {viewTab === 'daily' && (
-                <button onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', border: 'none', borderRadius: 7, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                <button onClick={openCreate} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 16px', border: 'none', borderRadius: 8, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                   <Plus width={14} height={14} /> Add time
                 </button>
               )}
               <button title="Filters" onClick={() => setFilterOpen(x => !x)}
-                style={{ position: 'relative', width: 32, height: 32, border: `1px solid ${filterOpen ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 7, background: filterOpen ? '#F5F3FF' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: filterOpen ? '#6C63FF' : '#6B7280' }}>
+                style={{ position: 'relative', width: 32, height: 32, border: `1px solid ${filterOpen ? '#6C63FF' : '#E8E8E8'}`, borderRadius: 8, background: filterOpen ? '#EEEDFF' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: filterOpen ? '#6C63FF' : '#6B7280' }}>
                 <SlidersHorizontal width={15} height={15} />
                 {isFilterActive && <span style={{ position: 'absolute', top: 4, right: 4, width: 6, height: 6, borderRadius: '50%', background: '#6C63FF', border: '1px solid #fff' }} />}
               </button>
@@ -1369,19 +1371,19 @@ export function TimesheetsPage() {
               <div style={{ width: 1, height: 18, background: '#E5E7EB', flexShrink: 0 }} />
               {mode === 'person' ? (
                 <>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 10px', border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '4px 10px', border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff' }}>
                     {worker && <Avatar w={worker} size={20} />}
                     <select value={wid} onChange={e => setWid(e.target.value)} style={{ border: 'none', outline: 'none', fontSize: 13, color: '#374151', background: 'transparent', cursor: 'pointer' }}>
                       {WORKERS.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
                     </select>
                   </div>
                   <Link to={peopleProfile(wid)} title="View profile"
-                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', color: '#6B7280', textDecoration: 'none', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>
+                    style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 10px', border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', color: '#6B7280', textDecoration: 'none', fontSize: 12.5, fontWeight: 500, whiteSpace: 'nowrap' }}>
                     <ExternalLink width={12} height={12} /> View profile
                   </Link>
                 </>
               ) : (
-                <select value={tid} onChange={e => setTid(e.target.value)} style={{ padding: '4px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}>
+                <select value={tid} onChange={e => setTid(e.target.value)} style={{ padding: '4px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#374151', background: '#fff', cursor: 'pointer', outline: 'none' }}>
                   {TEAMS.map(t => <option key={t.id} value={t.id}>{t.name} — {t.client}</option>)}
                 </select>
               )}
@@ -1467,7 +1469,7 @@ export function TimesheetsPage() {
                           </td>
 
                           {/* Project */}
-                          <td style={{ padding: '12px 16px' }}>
+                          <td style={{ padding: '12px 14px' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <Avatar w={w} size={32} />
                               <div>
@@ -1504,22 +1506,22 @@ export function TimesheetsPage() {
                           </td>
 
                           {/* Activity */}
-                          <td style={{ padding: '12px 16px', fontSize: 13.5, color: isIdle ? '#D1D5DB' : '#374151' }}>
+                          <td style={{ padding: '12px 14px', fontSize: 13.5, color: isIdle ? '#D1D5DB' : '#374151' }}>
                             {isIdle ? '0%' : `${e.activity_rate}%`}
                           </td>
 
                           {/* Idle */}
-                          <td style={{ padding: '12px 16px', fontSize: 13.5, color: isIdle ? '#D97706' : '#374151' }}>
+                          <td style={{ padding: '12px 14px', fontSize: 13.5, color: isIdle ? '#D97706' : '#374151' }}>
                             {isIdle ? '100%' : '0%'}
                           </td>
 
                           {/* Manual */}
-                          <td style={{ padding: '12px 16px', fontSize: 13.5, color: '#374151' }}>
+                          <td style={{ padding: '12px 14px', fontSize: 13.5, color: '#374151' }}>
                             {e.manual_rate}%
                           </td>
 
                           {/* Duration */}
-                          <td style={{ padding: '12px 16px' }}>
+                          <td style={{ padding: '12px 14px' }}>
                             <span style={{ fontSize: 13.5, color: '#6C63FF', fontWeight: 500 }}>
                               {fmtDurHMS(e.duration)}
                             </span>
@@ -1527,7 +1529,7 @@ export function TimesheetsPage() {
                           </td>
 
                           {/* Time range */}
-                          <td style={{ padding: '12px 16px', fontSize: 13.5, color: '#6C63FF' }}>
+                          <td style={{ padding: '12px 14px', fontSize: 13.5, color: '#6C63FF' }}>
                             {fmtClock(e.start)} - {fmtClock(e.end)}
                           </td>
 
@@ -1539,7 +1541,7 @@ export function TimesheetsPage() {
                                 <button
                                   onClick={() => setExpanded(x => x === e.id ? null : e.id)}
                                   title="Edit history"
-                                  style={{ width: 28, height: 28, border: '1px solid #E5E7EB', borderRadius: 6, background: isExp ? '#F5F3FF' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C63FF' }}
+                                  style={{ width: 28, height: 28, border: '1px solid #E8E8E8', borderRadius: 8, background: isExp ? '#EEEDFF' : '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6C63FF' }}
                                 >
                                   <ChevronDown width={13} height={13} style={{ transform: isExp ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s' }} />
                                 </button>
@@ -1552,7 +1554,7 @@ export function TimesheetsPage() {
                                     const r = (ev.currentTarget as HTMLElement).getBoundingClientRect()
                                     setActionsOpen(x => x?.id === e.id ? null : { id: e.id, top: r.bottom + 4, right: window.innerWidth - r.right })
                                   }}
-                                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#374151' }}
+                                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#374151' }}
                                 >
                                   Actions <ChevronDown width={11} height={11} />
                                 </button>
@@ -1583,7 +1585,7 @@ export function TimesheetsPage() {
         return (
           <>
             <div style={{ position: 'fixed', inset: 0, zIndex: 49 }} onClick={() => setActionsOpen(null)} />
-            <div style={{ position: 'fixed', top: actionsOpen.top, right: actionsOpen.right, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 130, overflow: 'hidden' }}>
+            <div style={{ position: 'fixed', top: actionsOpen.top, right: actionsOpen.right, background: '#fff', border: '1px solid #E8E8E8', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 50, minWidth: 130, overflow: 'hidden' }}>
               <DropItem icon={<Edit2 width={12} height={12} />} label="Edit" onClick={() => { openEdit(e); setActionsOpen(null) }} />
               {!isIdle && <DropItem icon={<Scissors width={12} height={12} />} label="Split shift" onClick={() => splitEntry(e)} />}
               <DropItem icon={<Trash2 width={12} height={12} />} label="Delete" onClick={() => { deleteEntry(e.id); setActionsOpen(null) }} danger />
@@ -1603,7 +1605,7 @@ export function TimesheetsPage() {
         <div style={{ flex: 1, overflowY: 'auto', padding: '18px 20px' }}>
           {/* Person / Client / Group */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Person / Client / Group</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Person / Client / Group</div>
             <select
               value={filterEmployees.length === 0 ? '' : (filterEmployees.length === 1 ? `w:${filterEmployees[0]}` : (TEAMS.find(t => t.workerIds.every(id => filterEmployees.includes(id)) && t.workerIds.length === filterEmployees.length) ? `g:${TEAMS.find(t => t.workerIds.every(id => filterEmployees.includes(id)) && t.workerIds.length === filterEmployees.length)!.id}` : `c:${WORKERS.find(w => filterEmployees.includes(w.id))?.client ?? ''}`))}
               onChange={ev => {
@@ -1613,7 +1615,7 @@ export function TimesheetsPage() {
                 if (v.startsWith('c:')) { const cn = v.slice(2); setFilterEmployees(WORKERS.filter(w => w.client === cn).map(w => w.id)); return }
                 if (v.startsWith('g:')) { const gid = v.slice(2); const t = TEAMS.find(t => t.id === gid); setFilterEmployees(t ? t.workerIds : []); return }
               }}
-              style={{ width: '100%', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, color: '#111827', outline: 'none', background: '#fff' }}
+              style={{ width: '100%', padding: '8px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none', background: '#fff' }}
             >
               <option value="">All</option>
               {WORKERS.map(w => <option key={w.id} value={`w:${w.id}`}>{w.name}</option>)}
@@ -1624,22 +1626,22 @@ export function TimesheetsPage() {
 
           {/* Activity Rate */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Activity Rate</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Activity Rate</div>
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, color: '#9CA3AF', display: 'block', marginBottom: 4 }}>Min %</label>
-                <input type="number" min={0} max={100} value={filterActivityMin} onChange={ev => setFilterActivityMin(Math.min(Number(ev.target.value), filterActivityMax))} style={{ width: '100%', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }} />
+                <input type="number" min={0} max={100} value={filterActivityMin} onChange={ev => setFilterActivityMin(Math.min(Number(ev.target.value), filterActivityMax))} style={{ width: '100%', padding: '8px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }} />
               </div>
               <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 11, color: '#9CA3AF', display: 'block', marginBottom: 4 }}>Max %</label>
-                <input type="number" min={0} max={100} value={filterActivityMax} onChange={ev => setFilterActivityMax(Math.max(Number(ev.target.value), filterActivityMin))} style={{ width: '100%', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }} />
+                <input type="number" min={0} max={100} value={filterActivityMax} onChange={ev => setFilterActivityMax(Math.max(Number(ev.target.value), filterActivityMin))} style={{ width: '100%', padding: '8px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }} />
               </div>
             </div>
           </div>
 
           {/* Time Type */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Time Type</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Time Type</div>
             {['Normal','Idle','Manual','Break'].map(type => (
               <label key={type} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
                 <input type="checkbox" checked={filterTimeTypes.has(type)} onChange={ev => setFilterTimeTypes(prev => { const next = new Set(prev); ev.target.checked ? next.add(type) : next.delete(type); return next })} style={{ width: 15, height: 15, cursor: 'pointer' }} />
@@ -1650,7 +1652,7 @@ export function TimesheetsPage() {
 
           {/* Activity Levels */}
           <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>Activity Level</div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Activity Level</div>
             {['Low','Medium','High'].map(lvl => (
               <label key={lvl} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, cursor: 'pointer', fontSize: 13, color: '#374151' }}>
                 <input type="checkbox" checked={filterActivityLevels.has(lvl)} onChange={ev => setFilterActivityLevels(prev => { const next = new Set(prev); ev.target.checked ? next.add(lvl) : next.delete(lvl); return next })} style={{ width: 15, height: 15, cursor: 'pointer' }} />
@@ -1660,7 +1662,7 @@ export function TimesheetsPage() {
           </div>
         </div>
         <div style={{ padding: '14px 20px', borderTop: '1px solid #E8E8E8' }}>
-          <button onClick={() => setFilterOpen(false)} style={{ width: '100%', padding: '9px', border: 'none', borderRadius: 7, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Apply</button>
+          <button onClick={() => setFilterOpen(false)} style={{ width: '100%', padding: '9px', border: 'none', borderRadius: 8, background: '#6C63FF', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Apply</button>
         </div>
       </div>
     </div>
@@ -1669,10 +1671,10 @@ export function TimesheetsPage() {
 
 // ── Tiny helpers ──
 function NavBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
-  return <button onClick={onClick} style={{ width: 28, height: 28, border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>{children}</button>
+  return <button onClick={onClick} style={{ width: 28, height: 28, border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>{children}</button>
 }
 function IconBtn({ children, title }: { children: React.ReactNode; title?: string }) {
-  return <button title={title} style={{ width: 32, height: 32, border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>{children}</button>
+  return <button title={title} style={{ width: 32, height: 32, border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280' }}>{children}</button>
 }
 function ModeBtn({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return <button onClick={onClick} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '5px 12px', border: 'none', borderRadius: 99, cursor: 'pointer', fontSize: 12.5, fontWeight: 500, background: active ? '#fff' : 'transparent', color: active ? '#111827' : '#6B7280', boxShadow: active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none' }}>{children}</button>
@@ -1714,4 +1716,4 @@ function HoverTooltip({ label, children }: { label: string; children: React.Reac
   )
 }
 
-const TH: React.CSSProperties = { padding: '9px 16px', textAlign: 'left', fontSize: 11.5, fontWeight: 600, color: '#6B7280', whiteSpace: 'nowrap' }
+const TH: React.CSSProperties = { padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight,
   X, Check, Download, PenLine, ChevronUp,
@@ -471,12 +471,16 @@ const thStyle: React.CSSProperties = {
 }
 
 export function WorkSessionsPage() {
+  const [searchParams] = useSearchParams()
   const [rangeStart, setRangeStart] = useState(CURRENT_WEEK_START)
   const [rangeEnd,   setRangeEnd]   = useState(CURRENT_WEEK_END)
 
   const [selClients,  setSelClients]  = useState<Set<string>>(new Set())
   const [selProjects, setSelProjects] = useState<Set<string>>(new Set())
-  const [selMembers,  setSelMembers]  = useState<Set<string>>(new Set())
+  const [selMembers,  setSelMembers]  = useState<Set<string>>(() => {
+    const m = searchParams.get('member')
+    return m ? new Set([m]) : new Set()
+  })
 
   // Collapsed date groups
   const [collapsedDates, setCollapsedDates] = useState<Set<string>>(new Set())

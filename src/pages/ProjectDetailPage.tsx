@@ -1,11 +1,27 @@
 import { useState } from 'react'
 import { useNavigate, useParams, useLocation } from 'react-router-dom'
-import { ArrowLeft, Clock, DollarSign, CheckSquare, TrendingUp, Plus, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Clock, DollarSign, CheckSquare, TrendingUp, Plus, ExternalLink, BarChart2 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { PROJECTS, getProjectMembers } from '../data/projectsData'
 import { ROUTES, peopleProfile, clientPage, type Crumb } from '../lib/routes'
 import { NewTaskModal } from '../components/NewTaskModal'
 import { getSharedTasks } from './TaskDetailPage'
+
+function _hash(s: string): number {
+  let h = 0
+  for (let i = 0; i < s.length; i++) h = (Math.imul(31, h) + s.charCodeAt(i)) | 0
+  return Math.abs(h)
+}
+
+function weeklyMinsForMember(memberId: string, projectName: string): number {
+  const seed = _hash(`${memberId}_${projectName}_week`)
+  return (seed % 2400) + 120
+}
+
+function formatDuration(mins: number): string {
+  const h = Math.floor(mins / 60), m = mins % 60
+  return h > 0 ? `${h}h${m > 0 ? ` ${m}m` : ''}` : `${m}m`
+}
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>()
@@ -90,10 +106,11 @@ export function ProjectDetailPage() {
 
           {/* stat row */}
           <div style={{ display: 'flex', gap: 24, marginTop: 18, paddingTop: 18, borderTop: '1px solid #F3F4F6', flexWrap: 'wrap' }}>
-            <Stat icon={<Clock width={14} height={14} color="#6C63FF" />}      label="Total hours"    value={`${members.reduce((s, m) => s + m.hoursOnProject, 0)} hrs`} />
-            <Stat icon={<DollarSign width={14} height={14} color="#16A34A" />} label="Avg. pay rate"  value={members.length ? `$${avgPayRate}/hr`  : '—'} />
-            <Stat icon={<TrendingUp width={14} height={14} color="#F59E0B" />} label="Avg. bill rate" value={members.length ? `$${avgBillRate}/hr` : '—'} />
-            <Stat icon={<CheckSquare width={14} height={14} color="#6C63FF" />} label="Tasks"         value={`${getSharedTasks().filter(t => t.projectId === project.id).length}`} />
+            <Stat icon={<Clock width={14} height={14} color="#6C63FF" />}       label="Total hours"    value={`${members.reduce((s, m) => s + m.hoursOnProject, 0)} hrs`} />
+            <Stat icon={<BarChart2 width={14} height={14} color="#8B5CF6" />}   label="This week"      value={members.length ? formatDuration(members.reduce((s, m) => s + weeklyMinsForMember(m.id, project.name), 0)) : '—'} />
+            <Stat icon={<DollarSign width={14} height={14} color="#16A34A" />}  label="Avg. pay rate"  value={members.length ? `$${avgPayRate}/hr`  : '—'} />
+            <Stat icon={<TrendingUp width={14} height={14} color="#F59E0B" />}  label="Avg. bill rate" value={members.length ? `$${avgBillRate}/hr` : '—'} />
+            <Stat icon={<CheckSquare width={14} height={14} color="#6C63FF" />} label="Tasks"          value={`${getSharedTasks().filter(t => t.projectId === project.id).length}`} />
           </div>
         </div>
 
@@ -114,7 +131,8 @@ export function ProjectDetailPage() {
                         <Th>Role</Th>
                         <Th>Pay Rate</Th>
                         <Th>Bill Rate</Th>
-                        <Th>Hours</Th>
+                        <Th>This Week</Th>
+                        <Th>Total Hours</Th>
                         <Th>Current Task</Th>
                       </tr>
                     </thead>
@@ -155,6 +173,12 @@ export function ProjectDetailPage() {
                           <td style={{ padding: '11px 16px', fontSize: 13, color: '#374151' }}>${m.payRate}/hr</td>
                           <td style={{ padding: '11px 16px' }}>
                             <span style={{ fontSize: 13, color: '#059669', fontWeight: 600 }}>${m.billRate}/hr</span>
+                          </td>
+                          <td style={{ padding: '11px 16px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <BarChart2 width={12} height={12} color="#6C63FF" />
+                              <span style={{ fontSize: 13, color: '#374151', fontWeight: 500 }}>{formatDuration(weeklyMinsForMember(m.id, project.name))}</span>
+                            </div>
                           </td>
                           <td style={{ padding: '11px 16px', fontSize: 13, color: '#374151' }}>{m.hoursOnProject} hrs</td>
                           <td style={{ padding: '11px 16px', fontSize: 13, color: m.currentTask ? '#374151' : '#9CA3AF', fontStyle: m.currentTask ? 'normal' : 'italic' }}>

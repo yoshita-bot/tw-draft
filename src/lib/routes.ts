@@ -63,3 +63,23 @@ export function peopleProfile(workerId: string) {
 export function clientPage(clientName: string) {
   return `${ROUTES.people}?client=${encodeURIComponent(clientName)}`
 }
+
+/** Navigate to Activity > Screenshots pre-filtered to a specific worker by name */
+export function activityForWorker(workerName: string, date = 'today') {
+  return `${ROUTES.activityScreenshots}?worker=${encodeURIComponent(workerName)}&date=${date}`
+}
+
+/** Navigate to Work Sessions pre-filtered to a specific employee */
+export function workSessionsForMember(empId: string) {
+  return `${ROUTES.reportsWorkSessions}?member=${encodeURIComponent(empId)}`
+}
+
+/** Navigate to Time Edits pre-filtered to a specific employee */
+export function timeEditsForMember(empId: string) {
+  return `${ROUTES.reportsTimeEdits}?member=${encodeURIComponent(empId)}`
+}
+
+/** Navigate to Time Off Requests pre-filtered to a specific person by name */
+export function timeOffForMember(memberName: string) {
+  return `${ROUTES.timeOffRequests}?member=${encodeURIComponent(memberName)}`
+}

@@ -125,6 +125,14 @@ export function ClientProfilePage() {
   const diffColor = diff > 0 ? '#16A34A' : '#DC2626'
   const utcSign = client.utcOffset >= 0 ? '+' : ''
   const transactions = mockTransactions(client.id, client.avgMonthlyBilling, client.thisMonthBilling)
+
+  const seed = client.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+  const thisMonthHours = 80 + ((seed * 13) % 120)
+
+  function getMemberHoursForClient(empId: string) {
+    const seed = empId.split('').reduce((a, c) => a + c.charCodeAt(0), 0)
+    return 40 + ((seed * 7) % 200)
+  }
   const statusDot: Record<string, string> = { active: '#16A34A', inactive: '#9CA3AF', onboarding: '#CA8A04' }
 
   return (
@@ -280,6 +288,7 @@ export function ClientProfilePage() {
               <div style={{ overflowY: 'auto', maxHeight: 380, display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
                 {filteredMembers.map(emp => {
                   const empProjects = allProjects.filter(p => p.memberIds.includes(emp.id.replace('e', 'm')))
+                  const empHours = getMemberHoursForClient(emp.id)
                   return (
                     <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, border: '1px solid #F3F4F6', background: '#FAFAFA' }}>
                       <InitialAvatar name={emp.name} bg={emp.bg} fg={emp.fg} />
@@ -308,6 +317,12 @@ export function ClientProfilePage() {
                           {empProjects.length > 0 && <span style={{ color: '#9CA3AF' }}> · {empProjects.map(p => p.name).join(', ')}</span>}
                         </div>
                       </div>
+                      {empHours > 0 && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#6B7280', flexShrink: 0, background: '#F3F4F6', borderRadius: 6, padding: '3px 8px' }}>
+                          <Clock width={11} height={11} />
+                          {empHours}h
+                        </div>
+                      )}
                     </div>
                   )
                 })}
@@ -321,26 +336,45 @@ export function ClientProfilePage() {
           <Card>
             {/* Billing summary */}
             {(client.thisMonthBilling > 0 || client.avgMonthlyBilling > 0) && (
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 32, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #F3F4F6' }}>
-                <div>
-                  <div style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500, marginBottom: 4 }}>This month</div>
-                  <div style={{ fontSize: 26, fontWeight: 700, color: '#111827', lineHeight: 1, marginBottom: 5 }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 0, marginBottom: 20, paddingBottom: 20, borderBottom: '1px solid #F3F4F6' }}>
+                {/* This month */}
+                <div style={{ flex: 1, paddingRight: 32 }}>
+                  <div style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>This month</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#111827', lineHeight: 1, marginBottom: 6 }}>
                     {client.thisMonthBilling > 0 ? formatUSD(client.thisMonthBilling) : '—'}
                   </div>
                   {diff !== 0 && client.thisMonthBilling > 0 && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: diffColor, fontWeight: 600 }}>
-                      {diff > 0 ? <TrendingUp width={13} height={13} /> : <TrendingDown width={13} height={13} />}
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: diffColor, fontWeight: 600, background: diff > 0 ? '#F0FDF4' : '#FEF2F2', padding: '3px 8px', borderRadius: 6 }}>
+                      {diff > 0 ? <TrendingUp width={12} height={12} /> : <TrendingDown width={12} height={12} />}
                       {diff > 0 ? '+' : ''}{formatUSD(diff)} vs avg
                     </div>
                   )}
                 </div>
-                <div style={{ width: 1, height: 44, background: '#F3F4F6' }} />
-                <div>
-                  <div style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500, marginBottom: 4 }}>Avg / month</div>
-                  <div style={{ fontSize: 22, fontWeight: 600, color: '#6B7280', lineHeight: 1 }}>
+
+                <div style={{ width: 1, background: '#F3F4F6', alignSelf: 'stretch', flexShrink: 0 }} />
+
+                {/* Avg / month */}
+                <div style={{ flex: 1, paddingLeft: 32, paddingRight: 32 }}>
+                  <div style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Avg / month</div>
+                  <div style={{ fontSize: 28, fontWeight: 700, color: '#374151', lineHeight: 1, marginBottom: 6 }}>
                     {client.avgMonthlyBilling > 0 ? formatUSD(client.avgMonthlyBilling) : '—'}
                   </div>
+                  <div style={{ fontSize: 12, color: '#9CA3AF' }}>last 6 months</div>
                 </div>
+
+                {thisMonthHours > 0 && (
+                  <>
+                    <div style={{ width: 1, background: '#F3F4F6', alignSelf: 'stretch', flexShrink: 0 }} />
+                    {/* Worked hours */}
+                    <div style={{ flex: 1, paddingLeft: 32 }}>
+                      <div style={{ fontSize: 11.5, color: '#9CA3AF', fontWeight: 500, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Worked hours</div>
+                      <div style={{ fontSize: 28, fontWeight: 700, color: '#374151', lineHeight: 1, marginBottom: 6 }}>
+                        {thisMonthHours}h
+                      </div>
+                      <div style={{ fontSize: 12, color: '#9CA3AF' }}>this month</div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 

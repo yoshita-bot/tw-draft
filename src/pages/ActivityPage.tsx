@@ -187,7 +187,7 @@ function generateBatches(workerId: string, date: string): ScreenBatch[] {
 //  SCREENSHOT PLACEHOLDER  (SVG fake screen)
 // ─────────────────────────────────────────────────────────────
 
-function ScreenshotImage({ seed, width, height, style }: { seed: number; width: number; height: number; style?: React.CSSProperties }) {
+export function ScreenshotImage({ seed, width, height, style }: { seed: number; width: number; height: number; style?: React.CSSProperties }) {
   const isDark = seed % 3 !== 0
   const bg      = isDark ? '#1e1e2e' : '#f8fafc'
   const toolbar = isDark ? '#16213e' : '#e2e8f0'
@@ -469,7 +469,7 @@ function FilterPanel({
     setFilterActivityLevels(new Set())
   }
 
-  const inp: React.CSSProperties = { width: '100%', padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
+  const inp: React.CSSProperties = { width: '100%', padding: '7px 10px', border: '1px solid #E8E8E8', borderRadius: 8, fontSize: 13, color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
   const sectionLabel: React.CSSProperties = { fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10, display: 'block' }
 
   return (
@@ -605,7 +605,7 @@ function DateNav({ date, onChange }: { date: string; onChange: (d: string) => vo
         onClick={() => onChange(TODAY)}
         style={{
           marginLeft: 6, height: 34, padding: '0 12px', border: `1px solid ${isToday ? '#6C63FF' : '#E5E7EB'}`,
-          borderRadius: 7, background: isToday ? '#F5F3FF' : '#fff', cursor: 'pointer',
+          borderRadius: 7, background: isToday ? '#EEEDFF' : '#fff', cursor: 'pointer',
           fontSize: 12.5, fontWeight: 600, color: isToday ? '#6C63FF' : '#6B7280',
         }}
       >Today</button>
@@ -723,14 +723,14 @@ function NotePopup({ slotLabel, rect, existingNotes, onAppend, onClose }: {
         <div style={{ padding: '8px 14px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <span style={{ fontSize: 10.5, color: '#C4C4C4' }}>⌘↵ to save</span>
           <div style={{ display: 'flex', gap: 6 }}>
-            <button onClick={onClose} style={{ padding: '5px 12px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#6B7280' }}>
+            <button onClick={onClose} style={{ padding: '5px 12px', border: '1px solid #D1D5DB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#374151' }}>
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={!canSave}
               style={{
-                padding: '5px 14px', border: 'none', borderRadius: 6,
+                padding: '5px 14px', border: 'none', borderRadius: 8,
                 background: canSave ? '#6C63FF' : '#E5E7EB',
                 color: canSave ? '#fff' : '#9CA3AF',
                 cursor: canSave ? 'pointer' : 'default',
@@ -868,7 +868,7 @@ function AllNotesPanel({ open, onClose, notes, workerColor, slotOptions, onAddNo
                 onClick={() => setPickerOpen(x => !x)}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6, width: '100%',
-                  padding: '7px 10px', border: '1px solid #E5E7EB', borderRadius: 7,
+                  padding: '7px 10px', border: '1px solid #E8E8E8', borderRadius: 8,
                   background: '#fff', cursor: 'pointer', fontSize: 12.5, color: '#374151',
                   fontFamily: 'inherit', justifyContent: 'space-between',
                 }}
@@ -884,7 +884,7 @@ function AllNotesPanel({ open, onClose, notes, workerColor, slotOptions, onAddNo
 
               {pickerOpen && (
                 <div style={{
-                  marginTop: 4, border: '1px solid #E5E7EB', borderRadius: 7,
+                  marginTop: 4, border: '1px solid #E8E8E8', borderRadius: 8,
                   background: '#fff', maxHeight: 200, overflowY: 'auto',
                 }}>
                   {slotOptions.length === 0 ? (
@@ -896,7 +896,7 @@ function AllNotesPanel({ open, onClose, notes, workerColor, slotOptions, onAddNo
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '7px 12px', cursor: 'pointer',
                         borderBottom: '1px solid #F5F5F5',
-                        background: selectedSlots.has(slot.id) ? '#F5F3FF' : '#fff',
+                        background: selectedSlots.has(slot.id) ? '#EEEDFF' : '#fff',
                         transition: 'background 0.1s',
                       }}
                     >
@@ -926,14 +926,14 @@ function AllNotesPanel({ open, onClose, notes, workerColor, slotOptions, onAddNo
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
               <span style={{ fontSize: 10.5, color: '#C4C4C4' }}>⌘↵ to save</span>
               <div style={{ display: 'flex', gap: 6 }}>
-                <button onClick={closeCompose} style={{ padding: '5px 12px', border: '1px solid #E5E7EB', borderRadius: 6, background: '#fff', cursor: 'pointer', fontSize: 12, color: '#6B7280' }}>
+                <button onClick={closeCompose} style={{ padding: '5px 12px', border: '1px solid #D1D5DB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 12, fontWeight: 500, color: '#374151' }}>
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={!canSave}
                   style={{
-                    padding: '5px 14px', border: 'none', borderRadius: 6,
+                    padding: '5px 14px', border: 'none', borderRadius: 8,
                     background: canSave ? '#6C63FF' : '#E5E7EB',
                     color: canSave ? '#fff' : '#9CA3AF',
                     cursor: canSave ? 'pointer' : 'default',
@@ -1491,7 +1491,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
                 display: 'flex', alignItems: 'center', gap: 6,
                 height: 34, padding: '0 12px',
                 border: `1px solid ${notesOpen ? '#6C63FF' : '#E5E7EB'}`,
-                borderRadius: 7, background: notesOpen ? '#F5F3FF' : '#fff',
+                borderRadius: 7, background: notesOpen ? '#EEEDFF' : '#fff',
                 cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                 color: notesOpen ? '#6C63FF' : '#6B7280', flexShrink: 0,
               }}
@@ -1512,7 +1512,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
               style={{
                 position: 'relative', width: 34, height: 34,
                 border: `1px solid ${filterOpen || isFilterActive ? '#6C63FF' : '#E5E7EB'}`,
-                borderRadius: 7, background: filterOpen || isFilterActive ? '#F5F3FF' : '#fff',
+                borderRadius: 7, background: filterOpen || isFilterActive ? '#EEEDFF' : '#fff',
                 cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
                 color: filterOpen || isFilterActive ? '#6C63FF' : '#6B7280', flexShrink: 0,
               }}
@@ -1529,7 +1529,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
                 value={workerId}
                 onChange={e => setWorkerId(e.target.value)}
                 style={{
-                  height: 34, padding: '0 32px 0 32px', border: '1px solid #E5E7EB', borderRadius: 7,
+                  height: 34, padding: '0 32px 0 32px', border: '1px solid #E8E8E8', borderRadius: 8,
                   fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
                   outline: 'none', appearance: 'none', fontFamily: 'inherit', fontWeight: 500,
                 }}
@@ -1547,7 +1547,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
               value={timezone}
               onChange={e => setTimezone(e.target.value)}
               style={{
-                height: 34, padding: '0 12px', border: '1px solid #E5E7EB', borderRadius: 7,
+                height: 34, padding: '0 12px', border: '1px solid #E8E8E8', borderRadius: 8,
                 fontSize: 13, color: '#111827', background: '#fff', cursor: 'pointer',
                 outline: 'none', appearance: 'none', fontFamily: 'inherit', flexShrink: 0,
               }}
@@ -1564,7 +1564,7 @@ export function ActivityPage({ view }: { view: 'screenshots' | 'apps' }) {
             <DateNav date={date} onChange={setDate} />
 
             {/* Download */}
-            <button style={{ width: 34, height: 34, border: '1px solid #E5E7EB', borderRadius: 7, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', flexShrink: 0 }}>
+            <button style={{ width: 34, height: 34, border: '1px solid #E8E8E8', borderRadius: 8, background: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6B7280', flexShrink: 0 }}>
               <Download width={14} height={14} />
             </button>
           </div>

@@ -3,12 +3,12 @@ import { WHOS_ONLINE } from '../../data/dashboardData'
 import { avatarStyle, initials } from '../../utils/avatar'
 import { ROUTES } from '../../lib/routes'
 
-export function WhosOnlineWidget() {
+export function WhosOnlineWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   return (
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Who's online</span>
-        <Link to={ROUTES.people} className="widget-link">View all members →</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={ROUTES.people} className="widget-link">View all members →</Link>{gripNode}</div>
       </div>
       <div className="online-list">
         <div className="online-list-header">
@@ -17,7 +17,7 @@ export function WhosOnlineWidget() {
           <span>Today</span>
           <span>Activity</span>
         </div>
-        {WHOS_ONLINE.map((p) => {
+        {WHOS_ONLINE.slice(0, 6).map((p) => {
           const s = avatarStyle(p.name)
           const badgeClass = p.activityPct >= 70 ? 'high' : p.activityPct >= 45 ? 'medium' : 'low'
           return (

@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Plus, Search, SlidersHorizontal, ChevronDown, X, Check,
   Calendar, Clock, Users, DollarSign, AlertTriangle, CalendarDays,
@@ -1068,6 +1069,7 @@ function AdjustScheduleModal({ req, onClose }: { req: PtoRequest; onClose: () =>
 type Tab = 'requests' | 'policies'
 
 export function TimeOffRequestsPage() {
+  const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('requests')
   const [requests, setRequests] = useState<PtoRequest[]>(INITIAL_REQUESTS)
   const [selectedReq, setSelectedReq] = useState<PtoRequest | null>(null)
@@ -1079,7 +1081,7 @@ export function TimeOffRequestsPage() {
   const [policies, setPolicies] = useState<Policy[]>(POLICIES)
 
   // Filters — all open by default (no date gate)
-  const [searchQ, setSearchQ] = useState('')
+  const [searchQ, setSearchQ] = useState(() => searchParams.get('member') ?? '')
   const [statusFilter, setStatusFilter] = useState<RequestStatus | 'all'>('all')
   const [policyFilter, setPolicyFilter] = useState<string>('all')
   const [dateFrom, setDateFrom] = useState('')

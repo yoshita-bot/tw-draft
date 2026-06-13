@@ -1,11 +1,11 @@
 import { ATTENDANCE_KPIS, ATTENDANCE_VALUE_COLORS, ATTENDANCE_CONTRIBUTORS } from '../../data/dashboardData'
 
-export function AttendanceKPIs() {
+export function AttendanceKPIs({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   return (
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Attendance KPIs</span>
-        <span className="akpi-period">May 2026</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><span className="akpi-period">May 2026</span>{gripNode}</div>
       </div>
       <p className="akpi-sub">Team-wide attendance health at a glance</p>
 
@@ -30,7 +30,7 @@ export function AttendanceKPIs() {
       <div className="akpi-divider"></div>
       <p className="akpi-breakdown-label">Top contributors</p>
       <div className="akpi-breakdown-grid">
-        {ATTENDANCE_CONTRIBUTORS.map((c) => (
+        {ATTENDANCE_CONTRIBUTORS.slice(0, 3).map((c) => (
           <div className="akpi-breakdown-item" key={c.name}>
             <div className="avatar" style={{ width: 28, height: 28, fontSize: 10, fontWeight: 500, flexShrink: 0, background: c.bg, color: c.fg }}>
               {c.initials}

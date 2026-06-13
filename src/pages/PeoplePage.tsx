@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Search, X, ChevronDown, Check, GripVertical } from 'lucide-react'
+import { Search, X, ChevronDown, Check, GripVertical, Rows3 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { EMPLOYEES, type Employee, type PayType, type EmploymentType } from '../data/employeesData'
 import { CLIENTS, CLIENT_MAP } from '../data/clientsData'
 import { peopleProfile, ROUTES } from '../lib/routes'
+import { avatarStyle } from '../utils/avatar'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -72,16 +73,16 @@ function Avatar({ initials, bg, fg }: { initials: string; bg: string; fg: string
 // ── Status badge ──────────────────────────────────────────────────────────────
 
 const STATUS_STYLES: Record<string, { bg: string; color: string; dot: string; label: string }> = {
-  active:     { bg: '#DCFCE7', color: '#16A34A', dot: '#16A34A', label: 'Active' },
+  active:     { bg: '#DCFCE7', color: '#15803D', dot: '#16A34A', label: 'Active' },
   inactive:   { bg: '#F3F4F6', color: '#6B7280', dot: '#9CA3AF', label: 'Inactive' },
-  onboarding: { bg: '#FEF9C3', color: '#A16207', dot: '#CA8A04', label: 'Onboarding' },
+  onboarding: { bg: '#FEF3C7', color: '#92400E', dot: '#CA8A04', label: 'Onboarding' },
 }
 
 function StatusBadge({ status }: { status: string }) {
   const s = STATUS_STYLES[status] ?? STATUS_STYLES.inactive
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
+      display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px',
       borderRadius: 99, fontSize: 11.5, fontWeight: 600, background: s.bg, color: s.color,
     }}>
       <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.dot }} />
@@ -94,7 +95,7 @@ function StatusBadge({ status }: { status: string }) {
 
 const EMP_TYPE_STYLES: Record<EmploymentType, { bg: string; color: string; label: string }> = {
   'full-time':  { bg: '#EFF6FF', color: '#1D4ED8', label: 'Full-time' },
-  'part-time':  { bg: '#FFF7ED', color: '#C2410C', label: 'Part-time' },
+  'part-time':  { bg: '#FEF3C7', color: '#92400E', label: 'Part-time' },
   'contractor': { bg: '#F5F3FF', color: '#6D28D9', label: 'Contractor' },
 }
 
@@ -102,7 +103,7 @@ function EmpTypeBadge({ type }: { type: EmploymentType }) {
   const s = EMP_TYPE_STYLES[type]
   return (
     <span style={{
-      display: 'inline-flex', padding: '3px 9px', borderRadius: 99,
+      display: 'inline-flex', padding: '3px 10px', borderRadius: 99,
       fontSize: 11.5, fontWeight: 600, background: s.bg, color: s.color,
     }}>
       {s.label}
@@ -116,7 +117,7 @@ function PayTypeBadge({ payType }: { payType: PayType }) {
   const isHourly = payType === 'hourly'
   return (
     <span style={{
-      display: 'inline-flex', padding: '3px 9px', borderRadius: 99,
+      display: 'inline-flex', padding: '3px 10px', borderRadius: 99,
       fontSize: 11.5, fontWeight: 600,
       background: isHourly ? '#F0FDF4' : '#FFF1F2',
       color: isHourly ? '#15803D' : '#BE185D',
@@ -179,14 +180,12 @@ function ColumnManager({
         style={{
           display: 'flex', alignItems: 'center', gap: 6,
           padding: '7px 12px', border: `1px solid ${open ? '#6C63FF' : '#E8E8E8'}`,
-          borderRadius: 7, background: open ? '#EEEDFF' : '#fff',
+          borderRadius: 8, background: open ? '#EEEDFF' : '#fff',
           color: open ? '#6C63FF' : '#6B7280', fontSize: 12.5, fontWeight: 500,
           cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
         }}
       >
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <rect x="1" y="1" width="14" height="3" rx="1"/><rect x="1" y="6.5" width="14" height="3" rx="1"/><rect x="1" y="12" width="14" height="3" rx="1"/>
-        </svg>
+        <Rows3 width={14} height={14} />
         Columns
         {activeCount > 0 && (
           <span style={{ background: '#6C63FF', color: '#fff', fontSize: 10, fontWeight: 700, borderRadius: 99, padding: '0px 5px', lineHeight: '16px' }}>
@@ -349,7 +348,7 @@ function MultiFilterSelect({
           appearance: 'none', display: 'inline-flex', alignItems: 'center', gap: 5,
           padding: '7px 10px',
           border: `1px solid ${isActive ? '#6C63FF' : '#E8E8E8'}`,
-          borderRadius: 7, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer',
+          borderRadius: 8, fontSize: 12.5, fontFamily: 'inherit', cursor: 'pointer',
           background: isActive ? '#EEEDFF' : '#fff',
           color: isActive ? '#6C63FF' : '#6B7280',
           fontWeight: isActive ? 600 : 400, outline: 'none',
@@ -436,7 +435,7 @@ function MultiFilterSelect({
 function Cell({ col, emp, onNavigate }: { col: ColDef; emp: Employee; onNavigate: (id: string) => void }) {
   const client = CLIENT_MAP[emp.clientId]
   const td = (content: React.ReactNode, extra?: React.CSSProperties) => (
-    <td key={col.id} style={{ padding: '8px 10px', verticalAlign: 'middle', ...extra }}>
+    <td key={col.id} style={{ padding: '12px 14px', verticalAlign: 'middle', ...extra }}>
       {content}
     </td>
   )
@@ -445,7 +444,7 @@ function Cell({ col, emp, onNavigate }: { col: ColDef; emp: Employee; onNavigate
     case 'name':
       return td(
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Avatar initials={emp.initials} bg={emp.bg} fg={emp.fg} />
+          <Avatar initials={emp.initials} bg={avatarStyle(emp.name).bg} fg={avatarStyle(emp.name).color} />
           <div style={{ minWidth: 0 }}>
             <button
               onClick={() => onNavigate(emp.id)}
@@ -503,7 +502,7 @@ function Cell({ col, emp, onNavigate }: { col: ColDef; emp: Employee; onNavigate
     case 'timeTracking':
       return td(
         <span style={{
-          display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 9px',
+          display: 'inline-flex', alignItems: 'center', gap: 5, padding: '3px 10px',
           borderRadius: 99, fontSize: 11.5, fontWeight: 600,
           background: emp.timeTrackingEnabled ? '#F0FDF4' : '#F3F4F6',
           color: emp.timeTrackingEnabled ? '#15803D' : '#9CA3AF',
@@ -593,7 +592,7 @@ export function PeoplePage() {
 
         {/* ── Toolbar ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-          <div style={{ position: 'relative', flex: 1, maxWidth: 320 }}>
+          <div style={{ position: 'relative', width: 260 }}>
             <Search width={13} height={13} color="#9CA3AF" style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)' }} />
             <input
               value={search}
@@ -645,7 +644,7 @@ export function PeoplePage() {
           {activeFilterCount > 0 && (
             <button
               onClick={clearFilters}
-              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px', border: '1px solid #FCA5A5', borderRadius: 7, background: '#FEF2F2', color: '#EF4444', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px', border: '1px solid #FCA5A5', borderRadius: 8, background: '#FEF2F2', color: '#EF4444', fontSize: 12, fontWeight: 500, cursor: 'pointer', fontFamily: 'inherit' }}
             >
               <X width={11} height={11} /> Clear {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''}
             </button>
@@ -662,9 +661,9 @@ export function PeoplePage() {
                     <th
                       key={col.id}
                       style={{
-                        padding: '8px 10px',
+                        padding: '12px 14px',
                         textAlign: 'left',
-                        fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                        fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
                         whiteSpace: 'nowrap', borderBottom: '1px solid #E8E8E8', background: '#FAFAFA',
                         color: '#9CA3AF',
                         minWidth: col.minWidth,

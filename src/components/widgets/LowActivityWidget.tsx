@@ -6,18 +6,18 @@ import { ROUTES } from '../../lib/routes'
 function barClass(pct: number) { return pct < 35 ? 'bar-low' : pct < 45 ? 'bar-warn' : 'bar-gray' }
 function rateColor(pct: number) { return pct < 35 ? 'var(--danger)' : pct < 45 ? 'var(--warning)' : 'var(--muted)' }
 
-export function LowActivityWidget() {
+export function LowActivityWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   return (
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Low activity</span>
-        <Link to={`${ROUTES.timesheets}?worker=${LOW_ACTIVITY_ROWS[0].workerId}&filter=low-activity`} className="widget-link">View in timesheets →</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={`${ROUTES.timesheets}?worker=${LOW_ACTIVITY_ROWS[0].workerId}&filter=low-activity`} className="widget-link">View in timesheets →</Link>{gripNode}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', marginBottom: 8 }}>
         <span className="kpi-pill pill-warning" style={{ fontSize: 11, padding: '2px 8px' }}>{LOW_ACTIVITY_ROWS.length} flagged</span>
       </div>
       <div>
-        {LOW_ACTIVITY_ROWS.map((r) => {
+        {LOW_ACTIVITY_ROWS.slice(0, 6).map((r) => {
           const s = avatarStyle(r.name)
           const trendIcon  = r.trend < 0 ? '↘' : '—'
           const trendClass = r.trend < 0 ? 'down' : 'flat'

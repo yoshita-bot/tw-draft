@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   CalendarDays, ChevronDown, ChevronLeft, ChevronRight,
   ChevronsDownUp, ChevronsUpDown,
@@ -536,10 +536,14 @@ const DEFAULT_END   = TODAY
 type TypeFilter = 'all' | EditType
 
 export function TimeEditsPage() {
+  const [searchParams] = useSearchParams()
   const [rangeStart, setRangeStart] = useState(DEFAULT_START)
   const [rangeEnd,   setRangeEnd]   = useState(DEFAULT_END)
   const [selGroups,   setSelGroups]   = useState<Set<string>>(new Set())
-  const [selMembers,  setSelMembers]  = useState<Set<string>>(new Set())
+  const [selMembers,  setSelMembers]  = useState<Set<string>>(() => {
+    const m = searchParams.get('member')
+    return m ? new Set([m]) : new Set()
+  })
   const [selProjects, setSelProjects] = useState<Set<string>>(new Set())
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('all')
 

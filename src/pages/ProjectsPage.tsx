@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Plus, Search, Eye, Pencil, Trash2, X, Check, ChevronDown } from 'lucide-react'
+import { Plus, Search, Eye, Pencil, Trash2, X, Check, ChevronDown, Rows3, GripVertical } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { PROJECTS, ALL_MEMBERS, type Project, type ProjectMember } from '../data/projectsData'
 import { ROUTES, clientPage } from '../lib/routes'
@@ -40,7 +40,7 @@ function Avatar({ initials, bg, fg, size = 26 }: { initials: string; bg: string;
     <div style={{
       width: size, height: size, borderRadius: '50%', background: bg, color: fg,
       fontSize: size * 0.38, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flexShrink: 0, border: '1.5px solid #fff',
+      flexShrink: 0, border: '2px solid #fff',
     }}>
       {initials}
     </div>
@@ -61,7 +61,7 @@ function AvatarStack({ ids, projectManagerIds }: { ids: string[]; projectManager
         <div style={{
           width: 26, height: 26, borderRadius: '50%', background: '#E5E7EB', color: '#6B7280',
           fontSize: 9.5, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          marginLeft: -8, border: '1.5px solid #fff', flexShrink: 0,
+          marginLeft: -8, border: '2px solid #fff', flexShrink: 0,
         }}>+{extra}</div>
       )}
     </div>
@@ -181,7 +181,7 @@ function MemberPicker({
         onClick={() => open ? setOpen(false) : openDropdown()}
         style={{
           width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-          padding: '9px 12px', border: `1px solid ${open ? '#6C63FF' : '#D1D5DB'}`, borderRadius: 8,
+          padding: '9px 12px', border: `1px solid ${open ? '#6C63FF' : '#E8E8E8'}`, borderRadius: 8,
           background: '#fff', cursor: 'pointer', fontSize: 13,
           color: selected.length ? '#374151' : '#9CA3AF', fontFamily: 'inherit',
           boxShadow: open ? '0 0 0 3px rgba(108,99,255,0.12)' : 'none',
@@ -206,14 +206,14 @@ function MemberPicker({
             width: dropdownPos.width,
             zIndex: 9999,
             background: '#fff',
-            border: '1px solid #D1D5DB',
+            border: '1px solid #E8E8E8',
             borderRadius: 10,
             boxShadow: '0 8px 32px rgba(0,0,0,0.14)',
           }}
         >
           {/* search */}
           <div style={{ padding: '10px 10px 0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E5E7EB', borderRadius: 7, padding: '6px 10px', background: '#F9FAFB' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #E8E8E8', borderRadius: 8, padding: '6px 10px', background: '#F9FAFB' }}>
               <Search width={12} height={12} color="#9CA3AF" style={{ flexShrink: 0 }} />
               <input
                 autoFocus

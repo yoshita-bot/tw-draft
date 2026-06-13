@@ -2,15 +2,15 @@ import { Link } from 'react-router-dom'
 import { PROJECT_ACTIVITY } from '../../data/dashboardData'
 import { ROUTES } from '../../lib/routes'
 
-export function ProjectActivityWidget() {
+export function ProjectActivityWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   return (
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Current project activity</span>
-        <Link to={ROUTES.projects} className="widget-link">View projects →</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={ROUTES.projects} className="widget-link">View projects →</Link>{gripNode}</div>
       </div>
       <div className="widget-list">
-        {PROJECT_ACTIVITY.map((r) => {
+        {PROJECT_ACTIVITY.slice(0, 7).map((r) => {
           const barClass = r.pct >= 70 ? 'bar-ok' : r.pct >= 40 ? 'bar-warn' : 'bar-low'
           return (
             <div className="list-row" key={r.name}>

@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { NavSidebar } from './components/NavSidebar'
-import { DashboardPage } from './pages/DashboardPage'
+import { DSDashboardPage } from './ds/DSDashboardPage'
 import { TimesheetsPage } from './pages/TimesheetsPage'
 import { ActivityPage } from './pages/ActivityPage'
 import { ProjectsPage } from './pages/ProjectsPage'
@@ -40,7 +40,7 @@ export default function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Navigate to={ROUTES.dashboard} replace />} />
-            <Route path={ROUTES.dashboard}  element={<ErrorBoundary><DashboardPage /></ErrorBoundary>} />
+            <Route path={ROUTES.dashboard}  element={<ErrorBoundary><DSDashboardPage /></ErrorBoundary>} />
             <Route path={ROUTES.timesheets} element={<ErrorBoundary><TimesheetsPage /></ErrorBoundary>} />
 
             {/* Activity */}

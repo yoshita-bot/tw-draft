@@ -104,19 +104,29 @@ export const ME = {
 
   // Screenshots for Recent Activity
   screenshots: [
-    { id: 'ss1', time: '17:48', project: 'Client Portal Redesign', activity: 74, hue: '#6C63FF' },
-    { id: 'ss2', time: '17:18', project: 'Client Portal Redesign', activity: 81, hue: '#6C63FF' },
-    { id: 'ss3', time: '16:48', project: 'Onboarding Flow V2',     activity: 68, hue: '#06B6D4' },
-    { id: 'ss4', time: '16:18', project: 'Onboarding Flow V2',     activity: 65, hue: '#06B6D4' },
-    { id: 'ss5', time: '15:48', project: 'Onboarding Flow V2',     activity: 72, hue: '#06B6D4' },
-    { id: 'ss6', time: '15:18', project: 'Design System Audit',    activity: 70, hue: '#3B82F6' },
-    { id: 'ss7', time: '14:48', project: 'Design System Audit',    activity: 77, hue: '#3B82F6' },
-    { id: 'ss8', time: '14:18', project: 'Design System Audit',    activity: 69, hue: '#3B82F6' },
-    { id: 'ss9', time: '13:48', project: 'Design System Audit',    activity: 73, hue: '#3B82F6' },
-    { id: 'ss10', time: '12:18', project: 'Client Portal Redesign', activity: 84, hue: '#6C63FF' },
-    { id: 'ss11', time: '11:48', project: 'Client Portal Redesign', activity: 80, hue: '#6C63FF' },
-    { id: 'ss12', time: '11:18', project: 'Client Portal Redesign', activity: 76, hue: '#6C63FF' },
+    { id: 'ss1',  time: '17:48', project: 'Client Portal Redesign', activity: 74, hue: '#6C63FF', seed: 142 },
+    { id: 'ss2',  time: '17:18', project: 'Client Portal Redesign', activity: 81, hue: '#6C63FF', seed: 371 },
+    { id: 'ss3',  time: '16:48', project: 'Onboarding Flow V2',     activity: 68, hue: '#06B6D4', seed: 205 },
+    { id: 'ss4',  time: '16:18', project: 'Onboarding Flow V2',     activity: 65, hue: '#06B6D4', seed: 88  },
+    { id: 'ss5',  time: '15:48', project: 'Onboarding Flow V2',     activity: 72, hue: '#06B6D4', seed: 513 },
+    { id: 'ss6',  time: '15:18', project: 'Design System Audit',    activity: 70, hue: '#3B82F6', seed: 267 },
+    { id: 'ss7',  time: '14:48', project: 'Design System Audit',    activity: 77, hue: '#3B82F6', seed: 44  },
+    { id: 'ss8',  time: '14:18', project: 'Design System Audit',    activity: 69, hue: '#3B82F6', seed: 190 },
+    { id: 'ss9',  time: '13:48', project: 'Design System Audit',    activity: 73, hue: '#3B82F6', seed: 330 },
+    { id: 'ss10', time: '12:18', project: 'Client Portal Redesign', activity: 84, hue: '#6C63FF', seed: 77  },
+    { id: 'ss11', time: '11:48', project: 'Client Portal Redesign', activity: 80, hue: '#6C63FF', seed: 422 },
+    { id: 'ss12', time: '11:18', project: 'Client Portal Redesign', activity: 76, hue: '#6C63FF', seed: 156 },
   ],
 
   weeklyActivity: [78, 68, 88, 64, 74, 0, 0], // Mon–Sun
+
+  // Small widget data matching SmallWidget component shape (label, value, delta, up, data)
+  smallWidgets: [
+    { id: 'me-sw-hours-today',    label: 'Hours Today',    value: '6h 42m',  delta: '↑ 1h 6m vs yesterday',  up: true,  data: [5.5, 7.2, 8.0, 2.5, 6.7, 0, 0] },
+    { id: 'me-sw-hours-week',     label: 'Hours This Week',value: '31.5 hrs', delta: '↓ 1.5 hrs vs last wk', up: false, data: [33, 29, 35, 31.5, 0, 0, 0] },
+    { id: 'me-sw-activity-today', label: 'Activity Today', value: '74%',     delta: '↓ 4% vs yesterday',     up: false, data: [82, 79, 88, 64, 74, 0, 0] },
+    { id: 'me-sw-activity-week',  label: 'Activity (Avg)', value: '68%',     delta: '↑ 3% vs last week',     up: true,  data: [65, 70, 68, 72, 68, 0, 0] },
+    { id: 'me-sw-earnings-today', label: 'Earnings Today', value: '$134.00', delta: '↑ $22 vs yesterday',    up: true,  data: [110, 144, 160, 50, 134, 0, 0] },
+    { id: 'me-sw-earnings-week',  label: 'Earnings (Wk)',  value: '$621.50', delta: '↓ $28.50 vs last wk',  up: false, data: [650, 580, 700, 621, 0, 0, 0] },
+  ],
 }

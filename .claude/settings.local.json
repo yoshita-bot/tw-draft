@@ -141,7 +141,10 @@
       "Bash(git -C /Users/yoshita/Downloads/Abroadworks/Timeworks/timeworks-main log --oneline -5)",
       "Bash(curl -s -o /dev/null -w \"NavSidebar: %{http_code}\\\\n\" \"http://127.0.0.1:3335/src/components/NavSidebar.tsx\")",
       "Bash(curl -s -o /dev/null -w \"routes: %{http_code}\\\\n\" \"http://127.0.0.1:3335/src/lib/routes.ts\")",
-      "Bash(curl -s -o /dev/null -w \"css: %{http_code}\\\\n\" \"http://127.0.0.1:3335/src/index.css\")"
+      "Bash(curl -s -o /dev/null -w \"css: %{http_code}\\\\n\" \"http://127.0.0.1:3335/src/index.css\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://127.0.0.1:3335/ds-dashboard)",
+      "mcp__Claude_in_Chrome__navigate",
+      "Bash(lsof -ti:3335)"
     ]
   }
 }

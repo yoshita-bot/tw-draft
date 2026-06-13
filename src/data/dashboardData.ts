@@ -29,6 +29,8 @@ export const LOW_ACTIVITY_ROWS = [
   { name: 'Carmen Santos', workerId: 'w3', role: 'QA Engineer',      pct: 41, trend: -5,  hours: '6.2h / day' },
   { name: 'David Kim',     workerId: 'w4', role: 'Data Analyst',     pct: 44, trend: 0,   hours: '6.6h / day' },
   { name: 'Elena Patel',   workerId: 'w5', role: 'Frontend Dev',     pct: 47, trend: -3,  hours: '7.1h / day' },
+  { name: 'Frank Osei',    workerId: 'w6', role: 'DevOps Engineer',  pct: 32, trend: -9,  hours: '4.8h / day' },
+  { name: 'Grace Kim',     workerId: 'w7', role: 'QA Lead',          pct: 39, trend: -4,  hours: '5.8h / day' },
 ]
 
 export const WHOS_ONLINE = [
@@ -38,6 +40,8 @@ export const WHOS_ONLINE = [
   { name: 'Amara Osei',   task: 'Writing Q3 copy',            project: 'Content Strategy',  client: 'Novu Media',  activityPct: 62, hoursToday: '3:50', hoursWeek: '24h' },
   { name: 'Grace Kim',    task: 'Design review',              project: 'Dashboard UI',      client: 'Acme Corp',   activityPct: 55, hoursToday: '3:20', hoursWeek: '21h' },
   { name: 'Daniel Abreu', task: 'Preparing weekly report',    project: 'Analytics Setup',   client: 'Vero Health', activityPct: 43, hoursToday: '2:45', hoursWeek: '18h' },
+  { name: 'Hana Sato',    task: 'Reviewing sprint backlog',   project: 'Mobile App v2',     client: 'Vero Health', activityPct: 79, hoursToday: '5:10', hoursWeek: '29h' },
+  { name: 'Priya Nair',   task: 'Finalising invoice report',  project: 'API Integration',   client: 'Kabad Works', activityPct: 68, hoursToday: '4:30', hoursWeek: '26h' },
 ]
 
 export const WEEKLY_LIMITS = [
@@ -46,6 +50,8 @@ export const WEEKLY_LIMITS = [
   { name: 'Nina Patel',    role: 'Product Design', used: 32, cap: 40, client: 'Nova Ltd'   },
   { name: 'James Okonkwo', role: 'Data Analyst',   used: 28, cap: 35, client: 'Acme Corp'  },
   { name: 'Luca Ferrari',  role: 'Frontend Dev',   used: 18, cap: 40, client: 'Brex Inc'   },
+  { name: 'Hana Sato',     role: 'Product Manager',used: 34, cap: 40, client: 'Vero Health' },
+  { name: 'Priya Nair',    role: 'UI Designer',    used: 22, cap: 40, client: 'Kabad Works' },
 ]
 
 export const AMOUNTS_OWED = [
@@ -54,14 +60,19 @@ export const AMOUNTS_OWED = [
   { name: 'Daniel Abreu', role: 'Copywriter',        client: 'Internal',   period: 'May 16–31', hrs: 38, rate: 42, amt: 1596, status: 'due-today' as const },
   { name: 'Hana Sato',    role: 'Product Manager',  client: 'Acme Corp',  period: 'May 16–31', hrs: 36, rate: 60, amt: 2160, status: 'upcoming'  as const, dueLabel: 'Due Jun 5' },
   { name: 'Grace Kim',    role: 'QA Engineer',       client: 'Nova Ltd',   period: 'May 16–31', hrs: 40, rate: 38, amt: 1520, status: 'upcoming'  as const, dueLabel: 'Due Jun 5' },
+  { name: 'Luca Ferrari', role: 'Frontend Dev',     client: 'Vero Health',period: 'May 16–31', hrs: 34, rate: 52, amt: 1768, status: 'upcoming'  as const, dueLabel: 'Due Jun 7' },
+  { name: 'Priya Nair',   role: 'UI Designer',      client: 'Kabad Works',period: 'Jun 1–15',  hrs: 31, rate: 45, amt: 1395, status: 'upcoming'  as const, dueLabel: 'Due Jun 20' },
 ]
 
 export const PROJECT_ACTIVITY = [
-  { name: 'Client Portal Redesign',        team: 'UX Team', pct: 78, hrs: 84 },
-  { name: 'API Integration — Kabad Works', team: 'IT Team', pct: 61, hrs: 67 },
-  { name: 'Onboarding Flow v2',            team: 'UX Team', pct: 55, hrs: 52 },
-  { name: 'Mobile App QA',                 team: 'QA',      pct: 40, hrs: 38 },
-  { name: 'Security Audit',                team: 'IT Team', pct: 30, hrs: 29 },
+  { name: 'Client Portal Redesign',        team: 'UX Team',  pct: 78, hrs: 84 },
+  { name: 'API Integration — Kabad Works', team: 'IT Team',  pct: 61, hrs: 67 },
+  { name: 'Onboarding Flow v2',            team: 'UX Team',  pct: 55, hrs: 52 },
+  { name: 'Mobile App QA',                 team: 'QA',       pct: 40, hrs: 38 },
+  { name: 'Security Audit',                team: 'IT Team',  pct: 30, hrs: 29 },
+  { name: 'Brand Identity Refresh',        team: 'Design',   pct: 68, hrs: 45 },
+  { name: 'Data Pipeline Migration',       team: 'Data',     pct: 22, hrs: 18 },
+  { name: 'Internal HR Portal',            team: 'Full-stack',pct: 47, hrs: 34 },
 ]
 
 export const TODOS = [
@@ -70,31 +81,45 @@ export const TODOS = [
   { id: 'td-3', name: 'Update attendance policy doc',       assignee: 'Grace K.',  tag: 'HR' },
   { id: 'td-4', name: 'Set up API Integration milestones',  assignee: 'Daniel A.', tag: 'IT Team' },
   { id: 'td-5', name: 'Schedule QA sprint kickoff',         assignee: 'Hana S.',   tag: 'Mobile App QA' },
+  { id: 'td-6', name: 'Send payroll summary to finance',    assignee: 'Tomás G.',  tag: 'Payroll' },
+  { id: 'td-7', name: 'Onboard Elena Volkov to tracker',    assignee: 'Nina P.',   tag: 'HR' },
+  { id: 'td-8', name: 'Export May invoices as PDF',         assignee: 'Grace K.',  tag: 'Finance' },
+  { id: 'td-9', name: 'Resolve overtime flagged for Marcus',assignee: 'Daniel A.', tag: 'Payroll' },
+  { id: 'td-10',name: 'Close out Mobile App QA phase',      assignee: 'Hana S.',   tag: 'Mobile App QA' },
 ]
 
 export const SCREENSHOTS_PEOPLE = [
   {
     name: 'Alice Chen', role: 'Backend Engineer', client: 'Acme Corp', project: 'API Refactor',
+    color: '#6C63FF',
     shots: [
-      { time: '2:41 PM', pct: 72, level: 'high' as const },
-      { time: '2:21 PM', pct: 37, level: 'medium' as const },
-      { time: '2:01 PM', pct: 8,  level: 'low' as const },
+      { time: '2:41 PM', pct: 72, level: 'high'   as const, seed: 142 },
+      { time: '2:21 PM', pct: 37, level: 'medium' as const, seed: 371 },
+      { time: '2:01 PM', pct: 8,  level: 'low'    as const, seed: 205 },
+      { time: '1:41 PM', pct: 81, level: 'high'   as const, seed: 88  },
+      { time: '1:21 PM', pct: 63, level: 'high'   as const, seed: 420 },
     ],
   },
   {
     name: 'Bob Martinez', role: 'Product Designer', client: 'Nova Ltd', project: 'Onboarding Redesign',
+    color: '#06B6D4',
     shots: [
-      { time: '2:38 PM', pct: 65, level: 'high' as const },
-      { time: '2:18 PM', pct: 17, level: 'low' as const },
-      { time: '1:58 PM', pct: 44, level: 'medium' as const },
+      { time: '2:38 PM', pct: 65, level: 'high'   as const, seed: 88  },
+      { time: '2:18 PM', pct: 17, level: 'low'    as const, seed: 513 },
+      { time: '1:58 PM', pct: 44, level: 'medium' as const, seed: 267 },
+      { time: '1:38 PM', pct: 71, level: 'high'   as const, seed: 333 },
+      { time: '1:18 PM', pct: 28, level: 'medium' as const, seed: 99  },
     ],
   },
   {
     name: 'Carmen Santos', role: 'Frontend Dev', client: 'Brex Inc', project: 'Dashboard UI',
+    color: '#3B82F6',
     shots: [
-      { time: '2:35 PM', pct: 55, level: 'high' as const },
-      { time: '2:15 PM', pct: 29, level: 'medium' as const },
-      { time: '1:55 PM', pct: 12, level: 'low' as const },
+      { time: '2:35 PM', pct: 55, level: 'high'   as const, seed: 44  },
+      { time: '2:15 PM', pct: 29, level: 'medium' as const, seed: 190 },
+      { time: '1:55 PM', pct: 12, level: 'low'    as const, seed: 330 },
+      { time: '1:35 PM', pct: 78, level: 'high'   as const, seed: 77  },
+      { time: '1:15 PM', pct: 41, level: 'medium' as const, seed: 215 },
     ],
   },
 ]
@@ -137,6 +162,7 @@ export const TO2_REQUESTS = [
   { id: 4, name: 'Sofia Muller', role: 'Data Analyst',     type: 'leave' as const,  status: 'pending' as const,  from: 'Jun 16', to: 'Jun 20', days: 5, hours: 40, submitted: 'May 28', reason: 'Planned leave. Dashboards handed off to Ray before departure.' },
   { id: 5, name: 'Leo Barros',   role: 'DevOps Eng.',      type: 'client' as const, status: 'pending' as const,  from: 'Jun 5',  to: 'Jun 6',  days: 2, hours: 16, submitted: 'May 26', reason: 'Client Acme Corp provided 2 days off as part of project contract.' },
   { id: 6, name: 'Ray Tanaka',   role: 'Frontend Dev',     type: 'client' as const, status: 'declined' as const, from: 'May 31', to: 'May 31', days: 1, hours: 8,  submitted: 'May 25', reason: 'Client Nova Ltd provided a discretionary day off.' },
+  { id: 7, name: 'Hana Sato',    role: 'Product Manager',  type: 'leave'  as const, status: 'approved' as const, from: 'Jul 14', to: 'Jul 18', days: 5, hours: 40, submitted: 'Jun 1',  reason: 'Annual leave — summer trip.' },
 ]
 
 export const TO2_UPCOMING = [

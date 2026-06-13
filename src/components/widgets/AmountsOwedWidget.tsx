@@ -14,7 +14,7 @@ const STATUS_CLASS: Record<string, string> = {
   upcoming: 'aw-badge-upcoming',
 }
 
-export function AmountsOwedWidget() {
+export function AmountsOwedWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   const total = AMOUNTS_OWED.reduce((s, r) => s + r.amt, 0)
   const nOverdue = AMOUNTS_OWED.filter((r) => r.status === 'overdue').length
 
@@ -27,20 +27,20 @@ export function AmountsOwedWidget() {
           <div className="aw-total">${total.toLocaleString()}</div>
           <div className="aw-sub">{AMOUNTS_OWED.length} employees · this pay cycle</div>
         </div>
-        <div className="aw-top-right">
+        <div className="aw-top-right" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           {nOverdue > 0 && (
             <div className="aw-overdue-chip">
               <div className="aw-overdue-dot" />
               <span>{nOverdue} overdue</span>
             </div>
           )}
-          <Link to={ROUTES.payments} className="widget-link">View all →</Link>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={ROUTES.payments} className="widget-link">View all →</Link>{gripNode}</div>
         </div>
       </div>
 
       {/* People rows */}
       <div className="aw-list">
-        {AMOUNTS_OWED.map((r) => {
+        {AMOUNTS_OWED.slice(0, 5).map((r) => {
           const av = avatarStyle(r.name)
           const label = r.status === 'upcoming' ? (r.dueLabel ?? '') : STATUS_LABEL[r.status]
           return (

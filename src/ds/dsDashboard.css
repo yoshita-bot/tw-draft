@@ -1,0 +1,639 @@
+/* DS Timeworks — all rules scoped under .ds-scope
+   Token source: Figma file gqYWCu1K6dJ9gESXtgNeCi, "Admin Manager View" frame 28116:272801
+   ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── PAGE SHELL ─────────────────────────────────────────────────────────── */
+.ds-scope {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background-color: #FAFBFD;
+  background-image:
+    radial-gradient(ellipse 65% 55% at 88%  8%,  rgba(221,214,254,.40) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 92% 92%,  rgba(157, 80,220,.30) 0%, transparent 70%),
+    radial-gradient(ellipse 55% 55% at  8% 12%,  rgba(160,139,201,.25) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 45% at  5% 88%,  rgba( 98,113,255,.18) 0%, transparent 70%),
+    linear-gradient(135deg, rgba(26,86,219,.15) 0%, rgba(139,92,246,.15) 73%, rgba(0,199,212,.15) 100%);
+}
+.ds-scope .content { background: transparent; }
+
+/* ── TOPBAR ──────────────────────────────────────────────────────────────── */
+.ds-scope .topbar {
+  background: rgba(255,255,255,.50) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(15,23,42,.10) !important;
+}
+
+/* ── PAGE HEADER ROW ─────────────────────────────────────────────────────── */
+.ds-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+/* ── SECTION LABELS ─────────────────────────────────────────────────────── */
+.ds-section-label {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6A6D76;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: 10px;
+}
+
+/* ── ME / TEAM TOGGLE ───────────────────────────────────────────────────── */
+.ds-toggle-bar {
+  display: flex;
+  background: rgba(255,255,255,.60);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 999px;
+  padding: 3px;
+  gap: 2px;
+  width: fit-content;
+}
+.ds-toggle-btn {
+  padding: 6px 22px;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  background: transparent;
+  color: #6A6D76;
+  transition: all .15s;
+}
+.ds-toggle-btn.active {
+  background: #3730A3;
+  color: #fff;
+  box-shadow: 0 1px 4px rgba(55,48,163,.35);
+}
+
+/* ── MANAGE BUTTON ───────────────────────────────────────────────────────── */
+.ds-scope .manage-btn {
+  border-radius: 999px !important;
+  border: 1px solid rgba(98,113,255,.55) !important;
+  color: #6271FF;
+  font-weight: 600;
+  background: rgba(255,255,255,.50);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ds-scope .manage-btn:hover {
+  background: rgba(98,113,255,.10);
+  border-color: #6271FF !important;
+  color: #3730A3;
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DS STATUS TILES  (Figma: Status Tile node 28116:272831)
+   rgba(255,255,255,0.50) · 16px radius · blur 21px · 20/24 padding · gap 16
+   ══════════════════════════════════════════════════════════════════════════ */
+.ds-tiles-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.ds-status-tile {
+  background: rgba(255,255,255,.50);
+  border: 1px solid rgba(15,23,42,.10);
+  border-radius: 16px;
+  backdrop-filter: blur(21px);
+  -webkit-backdrop-filter: blur(21px);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+/* Figma "Activity Title": Karla Regular 14px, #30343F */
+.ds-tile-label {
+  font-family: 'Karla', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  color: #30343F;
+  line-height: 1.4;
+}
+/* Figma "Activity Value": Montserrat SemiBold 32px, -0.5% LS */
+.ds-tile-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 32px;
+  font-weight: 600;
+  color: #30343F;
+  letter-spacing: -0.16px;
+  line-height: 1;
+}
+.ds-tile-delta {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: #6A6D76;
+  margin-top: -8px;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+.ds-tile-delta.up   { color: #15803D; }
+.ds-tile-delta.down { color: #B91C1C; }
+.ds-tile-arrow { font-size: 11px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   DS LARGE WIDGET CARDS  — 2-column grid, glass card, 16px/20px padding
+   ══════════════════════════════════════════════════════════════════════════ */
+.ds-widgets-stack {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Me section header row (label + manage btn) */
+.ds-me-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+/* Glass card — padding: 16px 20px so classless children get correct spacing.
+   Full-bleed elements (header, rows) use negative side margins to reach card edge. */
+.ds-scope .large-widget {
+  background: rgba(255,255,255,.50) !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  border-radius: 12px !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 8px rgba(98,113,255,.07), 0 4px 16px rgba(16,24,40,.05) !important;
+  padding: 16px 20px 20px !important;
+  overflow: hidden;
+}
+
+/* ── WIDGET CARD HEADER — full-bleed via negative margin ─────────────────── */
+/* Figma Header Row: 44px, padding 14/20, rgba(255,255,255,0.50) bg */
+.ds-scope .widget-header {
+  margin: -16px -20px 16px !important;
+  padding: 14px 20px !important;
+  border-bottom: 1px solid rgba(15,23,42,.07);
+  background: rgba(255,255,255,.50);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ds-scope .widget-title {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #1E1B4B !important;
+  letter-spacing: -.1px;
+}
+.ds-scope .widget-link,
+.ds-scope .ss-view-link {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6271FF;
+}
+.ds-scope .widget-link:hover,
+.ds-scope .ss-view-link:hover { color: #3730A3; }
+
+/* ── TABLE ROWS — full-bleed via negative side margins ───────────────────── */
+/* Figma Row /*: height 52px, padding 14/20 */
+.ds-scope .la-row,
+.ds-scope .wl-row,
+.ds-scope .online-row,
+.ds-scope .list-row,
+.ds-scope .ss-person,
+.ds-scope .aw-row,
+.ds-scope .to2-row,
+.ds-scope .to2-up-row,
+.ds-scope .to2-holiday-row,
+.ds-scope .to2-card {
+  margin: 0 -20px !important;
+  padding: 14px 20px !important;
+  min-height: 52px;
+  border-bottom: 1px solid rgba(15,23,42,.06) !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+}
+.ds-scope .la-row:last-child,
+.ds-scope .wl-row:last-child,
+.ds-scope .online-row:last-child,
+.ds-scope .list-row:last-child,
+.ds-scope .ss-person:last-child,
+.ds-scope .aw-row:last-child,
+.ds-scope .to2-row:last-child,
+.ds-scope .to2-up-row:last-child,
+.ds-scope .to2-card:last-child { border-bottom: none !important; }
+.ds-scope .la-row:hover,
+.ds-scope .wl-row:hover,
+.ds-scope .online-row:hover,
+.ds-scope .list-row:hover { background: rgba(98,113,255,.04) !important; }
+
+/* ── COLUMN / GROUP HEADERS — Karla SemiBold 12px, #6A6D76 ──────────────── */
+.ds-scope .online-list-header {
+  margin: 0 -20px !important;
+  padding: 10px 20px !important;
+  border-bottom: 1px solid rgba(15,23,42,.07);
+  background: rgba(255,255,255,.50);
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6A6D76;
+}
+.ds-scope .akpi-sub,
+.ds-scope .akpi-breakdown-label,
+.ds-scope .to2-section-title,
+.ds-scope .sch-section,
+.ds-scope .kpi-pills {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6A6D76;
+  letter-spacing: 0;
+}
+.ds-scope .akpi-sub { margin-bottom: 10px !important; }
+
+/* ── ATTENDANCE KPIS ─────────────────────────────────────────────────────── */
+/* Table-cell grid: transparent cells, hairline dividers */
+.ds-scope .akpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 0 !important;
+  margin: 0 -20px 12px !important;
+  border-top: 1px solid rgba(15,23,42,.07);
+  border-bottom: none;
+}
+.ds-scope .akpi-card {
+  background: transparent !important;
+  border: none !important;
+  border-right: 1px solid rgba(15,23,42,.07) !important;
+  border-bottom: 1px solid rgba(15,23,42,.07) !important;
+  border-radius: 0 !important;
+  padding: 14px 20px !important;
+}
+.ds-scope .akpi-card:nth-child(2n)        { border-right: none !important; }
+.ds-scope .akpi-card:nth-last-child(-n+2) { border-bottom: none !important; }
+.ds-scope .akpi-card-label { font-family: 'Karla', sans-serif; font-size: 12px; font-weight: 600; color: #6A6D76; margin-bottom: 4px; }
+.ds-scope .akpi-card-value { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 600; color: #1E1B4B; letter-spacing: -.3px; }
+.ds-scope .akpi-card-unit  { font-size: 13px; font-weight: 500; }
+.ds-scope .akpi-card-ctx   { font-family: 'Karla', sans-serif; font-size: 12px; color: #6A6D76; }
+.ds-scope .akpi-period     { background: rgba(98,113,255,.12); color: #6271FF; border-radius: 999px; padding: 2px 10px; font-family: 'Karla', sans-serif; font-size: 12px; font-weight: 600; }
+
+/* Breakdown section */
+.ds-scope .akpi-divider      { margin: 4px -20px 0 !important; border-top: 1px solid rgba(15,23,42,.07); }
+.ds-scope .akpi-breakdown-grid { display: flex; flex-direction: column; gap: 0; margin: 0 -20px !important; }
+.ds-scope .akpi-breakdown-item {
+  padding: 12px 20px !important;
+  background: transparent !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(15,23,42,.06) !important;
+  border-radius: 0 !important;
+}
+.ds-scope .akpi-breakdown-item:last-child { border-bottom: none !important; }
+.ds-scope .akpi-breakdown-name   { font-family: 'Karla', sans-serif; font-size: 13px; font-weight: 600; color: #30343F; }
+.ds-scope .akpi-breakdown-detail { font-family: 'Karla', sans-serif; font-size: 12px; color: #6A6D76; }
+.ds-scope .akpi-breakdown-val    { font-family: 'Montserrat', sans-serif; font-size: 14px; font-weight: 600; }
+
+/* ── SCHEDULES WIDGET ────────────────────────────────────────────────────── */
+.ds-scope .sch-stats {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.ds-scope .sch-stat {
+  flex: 1;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .sch-stat-label { font-family: 'Karla', sans-serif; font-size: 12px; font-weight: 600; color: #6A6D76; margin-bottom: 4px; }
+.ds-scope .sch-stat-val   { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 600; }
+
+/* Alert — top spacing replaces the removed clock badge */
+.ds-scope .sch-alert {
+  margin: 14px -20px 14px !important;
+  padding: 12px 20px !important;
+  background: rgba(252,228,230,.60);
+  border-top: 1px solid rgba(208,65,79,.20);
+  border-bottom: 1px solid rgba(208,65,79,.20);
+  border-radius: 0;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .sch-alert-cta   { background: #D8414F; border-radius: 999px; font-weight: 600; }
+.ds-scope .sch-alert-cta:hover { background: #B0212E; }
+.ds-scope .sch-chip        { border: 1px solid rgba(208,65,79,.30); border-radius: 999px; background: rgba(255,255,255,.50); }
+
+/* Timeline */
+.ds-scope .tl-wrap    { margin: 0 -20px !important; }
+.ds-scope .tl-header  { padding: 8px 20px 14px !important; border-bottom: 1px solid rgba(15,23,42,.06); }
+.ds-scope .tl-row     { padding: 4px 20px !important; }
+.ds-scope .tl-track   { background: rgba(98,113,255,.12); border-radius: 6px; }
+.ds-scope .tl-now-line { background: #D8414F; }
+
+/* Legend */
+.ds-scope .sch-legend { margin: 8px -20px 0 !important; padding: 10px 20px !important; border-top: 1px solid rgba(15,23,42,.07); }
+
+/* ── WHO'S ONLINE ────────────────────────────────────────────────────────── */
+.ds-scope .online-dot { background: #5FB54E; }
+.ds-scope .online-row:nth-child(even) { background: rgba(98,113,255,.03) !important; }
+.ds-scope .online-project { color: #6271FF; font-weight: 500; }
+
+/* ── WEEKLY LIMITS ───────────────────────────────────────────────────────── */
+.ds-scope .wl-stats { display: flex; gap: 10px; margin-bottom: 4px; }
+.ds-scope .wl-stat {
+  flex: 1;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 10px;
+  padding: 12px 14px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .wl-stat-label { font-family: 'Karla', sans-serif; font-size: 12px; font-weight: 600; color: #6A6D76; margin-bottom: 4px; }
+.ds-scope .wl-stat-val   { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 600; }
+.ds-scope .wl-stat-val.safe    { color: #15803D; }
+.ds-scope .wl-stat-val.warning { color: #8A5A00; }
+.ds-scope .wl-stat-val.danger  { color: #B0212E; }
+.ds-scope .wl-bar-track { background: rgba(98,113,255,.12); border-radius: 999px; }
+.ds-scope .wl-pill.safe     { background: #BBF7D0; color: #14532D; border-radius: 999px; }
+.ds-scope .wl-pill.warning  { background: #FDE68A; color: #78350F; border-radius: 999px; }
+.ds-scope .wl-pill.critical { background: #FECACA; color: #7F1D1D; border-radius: 999px; }
+.ds-scope .wl-legend {
+  margin: 4px -20px 0 !important;
+  padding: 10px 20px !important;
+  border-top: 1px solid rgba(15,23,42,.07);
+  display: flex;
+  gap: 16px;
+}
+
+/* ── ACTIVITY BARS ───────────────────────────────────────────────────────── */
+.ds-scope .activity-bar-bg  { background: rgba(98,113,255,.12); border-radius: 999px; }
+.ds-scope .activity-bar-fill { border-radius: 999px; }
+.ds-scope .bar-low  { background: #D8414F; }
+.ds-scope .bar-warn { background: #FACC15; }
+.ds-scope .bar-gray { background: #6271FF; }
+
+/* ── AMOUNTS OWED ────────────────────────────────────────────────────────── */
+.ds-scope .aw-card {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 10px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  margin-bottom: 12px;
+}
+.ds-scope .aw-overdue-chip    { background: rgba(252,228,230,.70); border: 1px solid rgba(208,65,79,.20); color: #B0212E; }
+.ds-scope .aw-process-btn     { background: #6271FF; border-radius: 999px; font-weight: 600; }
+.ds-scope .aw-process-btn:hover { background: #3730A3; }
+.ds-scope .aw-badge-overdue   { background: #FECACA; color: #7F1D1D; border-color: #FCA5A5; }
+.ds-scope .aw-badge-due-today { background: #FDE68A; color: #78350F; border-color: #FCD34D; }
+.ds-scope .aw-badge-upcoming  { background: rgba(255,255,255,.50); color: #6A6D76; }
+.ds-scope .lost-stat-num { color: #7F1D1D; }
+
+/* ── TIME OFF WIDGETS ────────────────────────────────────────────────────── */
+.ds-scope .to2-tab-bar {
+  background: rgba(255,255,255,.40);
+  border: 1px solid rgba(15,23,42,.08) !important;
+  border-radius: 999px;
+  overflow: visible;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 12px;
+}
+.ds-scope .to2-tab {
+  border-radius: 999px;
+  border: none !important;
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: #6A6D76;
+}
+.ds-scope .to2-tab.active { background: #3730A3; color: #fff; }
+
+.ds-scope .to2-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 12px; }
+.ds-scope .to2-stat {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .to2-stat-label { font-family: 'Karla', sans-serif; font-size: 12px; font-weight: 600; color: #6A6D76; }
+.ds-scope .to2-stat-val   { font-family: 'Montserrat', sans-serif; font-size: 22px; font-weight: 600; color: #1E1B4B; }
+
+.ds-scope .to2-filters { display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 12px; }
+.ds-scope .to2-filter  { border-radius: 999px; border: 1px solid rgba(98,113,255,.30) !important; color: #6271FF; font-weight: 500; }
+.ds-scope .to2-filter.active { background: #3730A3; color: #fff; border-color: #3730A3 !important; }
+
+.ds-scope .to2-reason {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 8px;
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+}
+.ds-scope .to2-act.approve { background: #BBF7D0; color: #14532D; border-color: #86EFAC; border-radius: 8px; }
+.ds-scope .to2-act.decline { background: #FECACA; color: #7F1D1D; border-color: #FCA5A5; border-radius: 8px; }
+.ds-scope .to2-act.approve:hover { background: #86EFAC; }
+.ds-scope .to2-act.decline:hover { background: #FCA5A5; }
+
+.ds-scope .to2-up-date   { background: #EDE9FE; border-radius: 8px; }
+.ds-scope .to2-up-month  { color: #6271FF; font-weight: 600; }
+.ds-scope .to2-up-day    { color: #3730A3; font-weight: 700; font-family: 'Montserrat', sans-serif; }
+.ds-scope .to2-up-dur    { background: rgba(255,255,255,.55); border: 1px solid rgba(15,23,42,.07); border-radius: 6px; }
+.ds-scope .to2-holiday-row {
+  background: rgba(231,245,234,.60) !important;
+  border: 1px solid rgba(31,122,61,.18) !important;
+}
+.ds-scope .to2-holiday-row .to2-up-date { background: #BBF7D0; }
+.ds-scope .to2-info-banner {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 8px;
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+.ds-scope .to2-inner-card {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.07);
+  border-radius: 10px;
+}
+
+/* ── STATUS PILLS & BADGES ───────────────────────────────────────────────── */
+.ds-scope .activity-badge.high,
+.ds-scope .ss-badge.high    { background: #BBF7D0 !important; color: #14532D !important; }
+.ds-scope .activity-badge.medium,
+.ds-scope .ss-badge.medium  { background: #FDE68A !important; color: #78350F !important; }
+.ds-scope .activity-badge.low,
+.ds-scope .ss-badge.low     { background: #FECACA !important; color: #7F1D1D !important; }
+
+.ds-scope .to2-approved, .ds-scope .pill-success  { background: #BBF7D0; color: #14532D; }
+.ds-scope .to2-holiday                             { background: #BBF7D0; color: #14532D; }
+.ds-scope .to2-pending,  .ds-scope .pill-warning   { background: #FDE68A; color: #78350F; }
+.ds-scope .to2-declined, .ds-scope .to2-sick,
+.ds-scope .pill-danger                             { background: #FECACA; color: #7F1D1D; }
+.ds-scope .to2-leave,    .ds-scope .badge-annual   { background: #DBEAFE; color: #1E40AF; }
+.ds-scope .badge-team    { background: #EDE9FE; color: #5B21B6; }
+.ds-scope .to2-status-pill { border-radius: 999px; font-weight: 600; }
+.ds-scope .kpi-pill.pill-warning { background: #FDE68A; color: #78350F; }
+
+/* ── TODOS ───────────────────────────────────────────────────────────────── */
+.ds-scope .widget-list { /* rows inside handle their own negative margins */ }
+.ds-scope .todo-name { font-family: 'Karla', sans-serif; font-size: 13px; font-weight: 500; color: #30343F; }
+.ds-scope .row-meta  { font-family: 'Karla', sans-serif; font-size: 12px; color: #6A6D76; }
+.ds-scope .badge-pill { border-radius: 999px; font-size: 11px; font-weight: 600; }
+
+/* ── RECENT ACTIVITY ─────────────────────────────────────────────────────── */
+.ds-scope .ss-person { display: flex; flex-direction: column; gap: 8px; }
+.ds-scope .ss-thumb  { background: #1E1B4B; border-radius: 8px; }
+.ds-scope .ss-thumb-bar { background: rgba(255,255,255,.25); }
+
+/* ── WIDGET CTA & BUTTONS ────────────────────────────────────────────────── */
+.ds-scope .widget-cta {
+  background: rgba(255,255,255,.40);
+  border: 1px solid rgba(98,113,255,.30);
+  border-radius: 999px;
+  color: #6271FF;
+  font-weight: 600;
+}
+.ds-scope .widget-cta:hover { background: rgba(98,113,255,.10); color: #3730A3; }
+.ds-scope .done-btn          { background: #6271FF; border-radius: 999px; font-weight: 600; }
+.ds-scope .done-btn:hover    { background: #3730A3; }
+
+/* ── SMALL WIDGET FALLBACK ───────────────────────────────────────────────── */
+.ds-scope .small-widget {
+  background: rgba(255,255,255,.50) !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  border-radius: 16px !important;
+  backdrop-filter: blur(21px);
+  -webkit-backdrop-filter: blur(21px);
+  box-shadow: none !important;
+}
+.ds-scope .sw-chart  { display: none; }
+.ds-scope .sw-left   { width: 100%; }
+.ds-scope .sw-label  { font-family: 'Karla', sans-serif; font-size: 14px; font-weight: 400; color: #30343F; }
+.ds-scope .sw-value  { font-family: 'Montserrat', sans-serif; font-size: 32px; font-weight: 600; color: #30343F; letter-spacing: -.16px; }
+.ds-scope .sw-delta.up   { color: #15803D; font-size: 12px; }
+.ds-scope .sw-delta.down { color: #B91C1C; font-size: 12px; }
+
+/* ── ME LARGE WIDGET CONTENT OVERRIDES ──────────────────────────────────── */
+
+/* Timesheet summary pills → glass mini-cards */
+.ds-scope .me-ts-pill {
+  background: rgba(255,255,255,.55) !important;
+  border: 1px solid rgba(98,113,255,.18);
+  border-radius: 10px !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .me-ts-pill-val {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  color: #3730A3 !important;
+}
+.ds-scope .me-ts-pill-lbl {
+  font-family: 'Karla', sans-serif;
+  font-size: 11px !important;
+  color: #6271FF !important;
+}
+
+/* Timesheet bar chart: update selected bar & day label colours */
+.ds-scope .me-bar-selected  { background: #6271FF !important; }
+.ds-scope .me-bar-today     { background: #A5B4FC !important; }
+.ds-scope .me-day-label-sel { color: #6271FF !important; }
+
+/* Timesheet entry left accent */
+.ds-scope .me-entry-bar-active { background: #6271FF !important; }
+
+/* Leave request rows → glass pill */
+.ds-scope .me-leave-row {
+  background: rgba(255,255,255,.55) !important;
+  border: 1px solid rgba(15,23,42,.08) !important;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border-radius: 10px !important;
+}
+
+/* Public holiday rows → light green tint like ds .to2-holiday-row */
+.ds-scope .me-holiday-bar { background: #6271FF !important; }
+
+/* My Work widget: project section separator */
+.ds-scope .me-work-section { border-top: 1px solid rgba(15,23,42,.07); padding-top: 14px; }
+
+/* Add task button */
+.ds-scope .me-add-task-btn {
+  color: #6271FF !important;
+  font-family: 'Karla', sans-serif;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+/* Section sub-labels (e.g. "My Leave", "Public Holidays") */
+.ds-scope .me-sub-label {
+  font-family: 'Karla', sans-serif !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  color: #6271FF !important;
+  letter-spacing: .05em;
+}
+
+/* Timesheet week nav buttons */
+.ds-scope .me-week-nav-btn {
+  background: rgba(255,255,255,.55) !important;
+  border: 1px solid rgba(15,23,42,.10) !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Recent activity screenshot thumbnail */
+.ds-scope .me-ss-card {
+  border: 1px solid rgba(15,23,42,.08) !important;
+  border-radius: 10px !important;
+}
+
+/* ── MANAGE-WIDGETS DRAWER ───────────────────────────────────────────────── */
+.ds-scope .drawer {
+  background: rgba(255,255,255,.80) !important;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-left: 1px solid rgba(15,23,42,.10) !important;
+}
+.ds-scope .drawer-header { border-bottom: 1px solid rgba(15,23,42,.08); }
+.ds-scope .drawer-footer { border-top: 1px solid rgba(15,23,42,.08); }
+.ds-scope .drawer-title  { font-family: 'Montserrat', sans-serif; color: #1E1B4B; font-weight: 600; }
+.ds-scope .picker-section-title {
+  font-family: 'Karla', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6271FF;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.ds-scope .picker-card {
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(15,23,42,.08);
+  border-radius: 10px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.ds-scope .toggle input:checked + .toggle-slider { background: #6271FF; }
+.ds-scope .drawer-close {
+  border: 1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.50);
+  border-radius: 8px;
+}

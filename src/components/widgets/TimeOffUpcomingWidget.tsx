@@ -2,15 +2,15 @@ import { Link } from 'react-router-dom'
 import { TO2_UPCOMING, TO2_TYPE_LABEL, TO2_TYPE_CLASS } from '../../data/dashboardData'
 import { ROUTES } from '../../lib/routes'
 
-export function TimeOffUpcomingWidget() {
+export function TimeOffUpcomingWidget({ gripNode }: { gripNode?: React.ReactNode } = {}) {
   return (
     <div className="large-widget">
       <div className="widget-header">
         <span className="widget-title">Upcoming leaves</span>
-        <Link to={ROUTES.attendance} className="widget-link">View all →</Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}><Link to={ROUTES.attendance} className="widget-link">View all →</Link>{gripNode}</div>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        {TO2_UPCOMING.map((u, idx) => (
+        {TO2_UPCOMING.slice(0, 5).map((u, idx) => (
           <div className={u.holiday ? 'to2-card to2-card-holiday' : 'to2-card'} key={idx}>
             <div className="to2-up-date-mini">
               <div className="to2-up-month">{u.startM}</div>
