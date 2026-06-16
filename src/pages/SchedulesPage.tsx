@@ -422,14 +422,14 @@ function groupEmployees(employees: Employee[], by: GroupBy): Group[] {
 
 // ── Member row (hover edit) ───────────────────────────────────────────────────
 
-function MemberRow({ e, tz, isLast, onEdit, onView }: { e: Employee; tz: TZKey; isLast: boolean; onEdit: (e: Employee) => void; onView: (e: Employee) => void }) {
+function MemberRow({ e, tz, isLast, onEdit, onView, days, dayOfWeek }: { e: Employee; tz: TZKey; isLast: boolean; onEdit: (e: Employee) => void; onView: (e: Employee) => void; days: Date[]; dayOfWeek: DayOfWeek }) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        display: 'grid', gridTemplateColumns: '240px 1fr 36px',
+        display: 'grid', gridTemplateColumns: '240px 116px 1fr 36px',
         borderBottom: isLast ? '1px solid #F3F4F6' : '1px solid #F9FAFB',
         background: hovered ? '#FAFAFE' : undefined,
         transition: 'background 0.1s',
@@ -455,10 +455,14 @@ function MemberRow({ e, tz, isLast, onEdit, onView }: { e: Employee; tz: TZKey; 
           </div>
         </div>
       </div>
+      {/* Working limits */}
+      <div onClick={() => onView(e)} style={{ borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', height: '100%' }}>
+        <LimitsCell e={e} days={days} dayOfWeek={dayOfWeek} />
+      </div>
       {/* Timeline — click also opens detail */}
       <div onClick={() => onView(e)} style={{ position: 'relative', padding: '0 8px', alignSelf: 'center' }}>
         {TL_HOURS.map(h => (
-          <div key={h} style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${(h/24)*100}% + 8px)`, width: 1, background: '#F3F4F6', zIndex: 0 }} />
+          <div key={h} style={{ position: 'absolute', top: 0, bottom: 0, left: `calc(${(h/24)*100}% + 46px)`, width: 1, background: '#F3F4F6', zIndex: 0 }} />
         ))}
         <TimelineBar e={e} tz={tz} />
       </div>
@@ -495,18 +499,23 @@ function MembersView({ groups, tz, page, onPage, total, onEdit, onView, groupBy 
 }) {
   const nowPct = (dispH(nowUTC(), tz) / 24) * 100
   const totalPages = Math.ceil(total / PAGE_SIZE)
+  const currentWeekDays = getWeekDays(0)
+  const todayDOW = new Date().getDay() as DayOfWeek
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E8E8E8', overflow: 'hidden' }}>
         {/* Timeline header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', borderBottom: '1px solid #F3F4F6', position: 'sticky', top: 0, background: '#fff', zIndex: 3 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '240px 116px 1fr', borderBottom: '1px solid #F3F4F6', position: 'sticky', top: 0, background: '#fff', zIndex: 3 }}>
           <div style={{ padding: '10px 16px', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
             Member · {total}
           </div>
+          <div style={{ padding: '10px 8px', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB' }}>
+            Limits
+          </div>
           <div style={{ position: 'relative', padding: '10px 0' }}>
             {TL_HOURS.map(h => (
-              <span key={h} style={{ position: 'absolute', left: `${(h/24)*100}%`, transform: 'translateX(-50%)', fontSize: 10, color: '#9CA3AF', fontWeight: 500 }}>
+              <span key={h} style={{ position: 'absolute', top: '50%', left: `calc(${(h/24)*100}% + 46px)`, transform: 'translate(-50%, -50%)', fontSize: 10, color: '#9CA3AF', fontWeight: 500 }}>
                 {fmtUTCHour(h, displayOffset(tz))}h → {fmt(h, tz)}
               </span>
             ))}
@@ -540,7 +549,7 @@ function MembersView({ groups, tz, page, onPage, total, onEdit, onView, groupBy 
               )}
 
               {group.members.map((e, idx) => (
-                <MemberRow key={e.id} e={e} tz={tz} isLast={idx === group.members.length - 1} onEdit={onEdit} onView={onView} />
+                <MemberRow key={e.id} e={e} tz={tz} isLast={idx === group.members.length - 1} onEdit={onEdit} onView={onView} days={currentWeekDays} dayOfWeek={todayDOW} />
               ))}
             </div>
           ))}
@@ -730,6 +739,44 @@ function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek, dailyLimit }: {
   )
 }
 
+// ── Limits cell ───────────────────────────────────────────────────────────────
+
+function LimitsCell({ e, days, dayOfWeek }: { e: Employee; days?: Date[]; dayOfWeek?: DayOfWeek }) {
+  const wk = e.scheduleLimit?.weeklyHours
+  const dy = e.scheduleLimit?.dailyHours
+  if (!wk && !dy) return (
+    <div style={{ display: 'flex', alignItems: 'center', height: '100%', padding: '0 8px' }}>
+      <span style={{ fontSize: 11, color: '#D1D5DB', fontStyle: 'italic' }}>—</span>
+    </div>
+  )
+
+  // Compute actual usage when context is available
+  const weekUsed  = (wk != null && days)       ? calcWeekHours(e, days)         : null
+  const dayUsed   = (dy != null && dayOfWeek != null) ? calcDayHours(e, dayOfWeek) : null
+
+  const weekOver  = weekUsed != null && wk != null && weekUsed > wk
+  const weekNear  = weekUsed != null && wk != null && !weekOver && weekUsed / wk >= 0.8
+  const dayOver   = dayUsed  != null && dy != null && dayUsed  > dy
+  const dayNear   = dayUsed  != null && dy != null && !dayOver  && dayUsed  / dy >= 0.9
+
+  function LimitLine({ used, limit, near, label }: { used: number | null; limit: number; near: boolean; label: string }) {
+    const usedStr = used != null ? (used % 1 === 0 ? String(used) : used.toFixed(1)) : null
+    return (
+      <span style={{ fontSize: 12, fontWeight: 500, color: near ? '#D97706' : '#9CA3AF', whiteSpace: 'nowrap', letterSpacing: '-0.01em' }}>
+        {usedStr != null ? `${usedStr}/${limit}h` : `${limit}h`}
+        <span style={{ fontSize: 9, fontWeight: 400, marginLeft: 3, color: near ? '#F3C07A' : '#D1D5DB' }}>{label}</span>
+      </span>
+    )
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, justifyContent: 'center', padding: '0 10px', height: '100%' }}>
+      {wk != null && <LimitLine used={weekUsed} limit={wk} near={weekNear} label="wk" />}
+      {dy != null && <LimitLine used={dayUsed} limit={dy} near={dayNear} label="day" />}
+    </div>
+  )
+}
+
 // ── Limit helpers ─────────────────────────────────────────────────────────────
 
 function calcDayHours(e: Employee, dow: DayOfWeek): number {
@@ -757,8 +804,11 @@ function WeekView({ employees, tz, weekOffset, onView }: { employees: Employee[]
   return (
     <div style={{ background: '#fff', borderRadius: 10, border: '1px solid #E8E8E8', overflow: 'hidden' }}>
       {/* Day headers */}
-      <div style={{ display: 'grid', gridTemplateColumns: '200px repeat(7, 1fr)', borderBottom: '1px solid #E8E8E8', position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '200px 116px repeat(7, 1fr)', borderBottom: '1px solid #E8E8E8', position: 'sticky', top: 0, background: '#fff', zIndex: 2 }}>
         <div />
+        <div style={{ padding: '10px 8px', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center' }}>
+          Limits
+        </div>
         {days.map((d, i) => {
           const isToday = d.toDateString() === today.toDateString()
           return (
@@ -784,7 +834,7 @@ function WeekView({ employees, tz, weekOffset, onView }: { employees: Employee[]
             key={e.id}
             onClick={() => onView(e)}
             title="View schedule"
-            style={{ display: 'grid', gridTemplateColumns: '200px repeat(7, 1fr)', borderBottom: idx < employees.length - 1 ? '1px solid #F9FAFB' : undefined, cursor: 'pointer' }}
+            style={{ display: 'grid', gridTemplateColumns: '200px 116px repeat(7, 1fr)', borderBottom: idx < employees.length - 1 ? '1px solid #F9FAFB' : undefined, cursor: 'pointer' }}
             onMouseEnter={ev => { ev.currentTarget.style.background = '#FAFAFE' }}
             onMouseLeave={ev => { ev.currentTarget.style.background = '' }}
           >
@@ -811,6 +861,10 @@ function WeekView({ employees, tz, weekOffset, onView }: { employees: Employee[]
                 )}
               </div>
               <Pencil size={11} color="#D1D5DB" />
+            </div>
+            {/* Limits cell */}
+            <div style={{ borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', height: 52, boxSizing: 'border-box' }}>
+              <LimitsCell e={e} days={days} />
             </div>
             {/* Day cells */}
             {days.map((d, di) => (
@@ -912,13 +966,16 @@ function DayView({ employees, tz, dayOffset, onView }: { employees: Employee[]; 
       </div>
 
       {/* Hour labels header */}
-      <div style={{ display: 'grid', gridTemplateColumns: '220px 1fr', borderBottom: '1px solid #F3F4F6' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '220px 116px 1fr', borderBottom: '1px solid #F3F4F6' }}>
         <div style={{ height: 32, borderRight: '1px solid #F3F4F6' }} />
-        <div style={{ display: 'flex', height: 32, overflowX: 'hidden' }}>
+        <div style={{ height: 32, borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', display: 'flex', alignItems: 'center', padding: '0 8px', fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+          Limits
+        </div>
+        <div style={{ position: 'relative', height: 32 }}>
           {DAY_SLOT_HOURS.map(h => (
-            <div key={h} style={{ flex: 1, fontSize: 10, color: '#9CA3AF', fontWeight: 500, padding: '8px 0 0 4px', borderLeft: '1px solid #F3F4F6' }}>
+            <span key={h} style={{ position: 'absolute', top: '50%', left: h === 0 ? '8px' : `${(h / 24) * 100}%`, transform: h === 0 ? 'translateY(-50%)' : 'translate(-50%, -50%)', fontSize: 10, color: '#9CA3AF', fontWeight: 500, whiteSpace: 'nowrap' }}>
               {fmt(h, tz)}
-            </div>
+            </span>
           ))}
         </div>
       </div>
@@ -929,7 +986,7 @@ function DayView({ employees, tz, dayOffset, onView }: { employees: Employee[]; 
           key={e.id}
           onClick={() => onView(e)}
           title="View schedule"
-          style={{ display: 'grid', gridTemplateColumns: '220px 1fr', height: 56, cursor: 'pointer', borderBottom: i < employees.length - 1 ? '1px solid #F9FAFB' : undefined, background: i % 2 === 0 ? '#FAFAFA' : '#fff' }}
+          style={{ display: 'grid', gridTemplateColumns: '220px 116px 1fr', height: 56, cursor: 'pointer', borderBottom: i < employees.length - 1 ? '1px solid #F9FAFB' : undefined, background: i % 2 === 0 ? '#FAFAFA' : '#fff' }}
           onMouseEnter={ev => { ev.currentTarget.style.background = '#FAFAFE' }}
           onMouseLeave={ev => { ev.currentTarget.style.background = i % 2 === 0 ? '#FAFAFA' : '#fff' }}
         >
@@ -943,6 +1000,11 @@ function DayView({ employees, tz, dayOffset, onView }: { employees: Employee[]; 
               </div>
             </div>
             <Pencil size={11} color="#D1D5DB" />
+          </div>
+
+          {/* Limits cell */}
+          <div style={{ borderLeft: '1px solid #E5E7EB', borderRight: '1px solid #E5E7EB', height: '100%' }}>
+            <LimitsCell e={e} dayOfWeek={dayOfWeek} />
           </div>
 
           {/* Timeline cell */}
@@ -1077,26 +1139,65 @@ function PersonDetailModal({ emp, tz, onEdit, onClose }: {
           )}
 
           {/* Schedule limits */}
-          {emp.scheduleLimit && (emp.scheduleLimit.weeklyHours != null || emp.scheduleLimit.dailyHours != null) && (
-            <DetailRow label="Hour limits">
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {emp.scheduleLimit.weeklyHours != null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 7 }}>
-                    <Clock size={12} color="#3B82F6" />
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1D4ED8' }}>{emp.scheduleLimit.weeklyHours}h</span>
-                    <span style={{ fontSize: 11, color: '#60A5FA' }}>/ week</span>
-                  </div>
-                )}
-                {emp.scheduleLimit.dailyHours != null && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 7 }}>
-                    <Clock size={12} color="#16A34A" />
-                    <span style={{ fontSize: 12.5, fontWeight: 600, color: '#15803D' }}>{emp.scheduleLimit.dailyHours}h</span>
-                    <span style={{ fontSize: 11, color: '#4ADE80' }}>/ day</span>
-                  </div>
-                )}
-              </div>
-            </DetailRow>
-          )}
+          {emp.scheduleLimit && (emp.scheduleLimit.weeklyHours != null || emp.scheduleLimit.dailyHours != null) && (() => {
+            const wkLimit   = emp.scheduleLimit!.weeklyHours
+            const dyLimit   = emp.scheduleLimit!.dailyHours
+            const todayDOW  = new Date().getDay() as DayOfWeek
+            const weekDays  = getWeekDays(0)
+            const weekUsed  = wkLimit != null ? calcWeekHours(emp, weekDays) : null
+            const dayUsed   = dyLimit != null ? calcDayHours(emp, todayDOW)  : null
+            const weekNear  = weekUsed != null && wkLimit != null && weekUsed / wkLimit >= 0.8
+            const dayNear   = dayUsed  != null && dyLimit != null && dayUsed  / dyLimit >= 0.9
+
+            function usedFmt(used: number) {
+              return used % 1 === 0 ? `${used}h` : `${used.toFixed(1)}h`
+            }
+
+            return (
+              <DetailRow label="Hour limits">
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                  {wkLimit != null && (() => {
+                    const pct = weekUsed != null ? Math.min(weekUsed / wkLimit, 1) : null
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12.5, color: '#6B7280' }}>Weekly</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: weekNear ? '#92400E' : '#374151' }}>
+                            {weekUsed != null ? `${usedFmt(weekUsed)} / ${wkLimit}h` : `${wkLimit}h`}
+                            {weekNear && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#D97706' }}>· near limit</span>}
+                          </span>
+                        </div>
+                        {pct != null && (
+                          <div style={{ height: 4, borderRadius: 2, background: '#F3F4F6', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct * 100}%`, background: weekNear ? '#F59E0B' : '#10B981', borderRadius: 2, transition: 'width 0.3s' }} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                  {dyLimit != null && (() => {
+                    const pct = dayUsed != null ? Math.min(dayUsed / dyLimit, 1) : null
+                    return (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
+                          <span style={{ fontSize: 12.5, color: '#6B7280' }}>Daily</span>
+                          <span style={{ fontSize: 12.5, fontWeight: 600, color: dayNear ? '#92400E' : '#374151' }}>
+                            {dayUsed != null ? `${usedFmt(dayUsed)} / ${dyLimit}h` : `${dyLimit}h`}
+                            {dayNear && <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 700, color: '#D97706' }}>· near limit</span>}
+                          </span>
+                        </div>
+                        {pct != null && (
+                          <div style={{ height: 4, borderRadius: 2, background: '#F3F4F6', overflow: 'hidden' }}>
+                            <div style={{ height: '100%', width: `${pct * 100}%`, background: dayNear ? '#F59E0B' : '#10B981', borderRadius: 2, transition: 'width 0.3s' }} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })()}
+                </div>
+              </DetailRow>
+            )
+          })()}
 
           {/* Note */}
           {emp.note && (
