@@ -9,6 +9,7 @@ import { TasksPage } from './pages/TasksPage'
 import { TaskDetailPage } from './pages/TaskDetailPage'
 import { StubPage } from './pages/StubPage'
 import { SecurityPage } from './pages/SecurityPage'
+import { TrackingRulesPage } from './pages/TrackingRulesPage'
 import { PeoplePage } from './pages/PeoplePage'
 import { PersonProfilePage } from './pages/PersonProfilePage'
 import { SchedulesPage } from './pages/SchedulesPage'
@@ -87,7 +88,8 @@ export default function App() {
             <Route path={ROUTES.pastPayments} element={<ErrorBoundary><PastPaymentsPage /></ErrorBoundary>} />
 
             {/* Settings */}
-            <Route path={ROUTES.settingsSecurity} element={<ErrorBoundary><SecurityPage /></ErrorBoundary>} />
+            <Route path={ROUTES.settingsSecurity}      element={<ErrorBoundary><SecurityPage /></ErrorBoundary>} />
+            <Route path={ROUTES.settingsTrackingRules} element={<ErrorBoundary><TrackingRulesPage /></ErrorBoundary>} />
 
             {/* Stub pages */}
             {STUB_PATHS.map(p => (

@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Briefcase, Calendar, Crown, Clock, Pencil, Search, X } from 'lucide-react'
+import { ArrowLeft, Users, Briefcase, Calendar, Crown, Clock, Pencil, Search, X, Mail, Activity, Timer, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { TEAM_MAP, updateTeam, TEAM_COLORS, type TeamRecord } from '../data/teamsData'
 import { EMPLOYEES, EMPLOYEE_MAP, SCHEDULE_TYPE_LABELS } from '../data/employeesData'
 import { PROJECTS } from '../data/projectsData'
 import { ROUTES, peopleProfile } from '../lib/routes'
+import { TodaysScreenshotsWidget, WorkSessionsWidget, ScheduleCard, TimesheetWidget } from '../components/profileWidgets'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -64,11 +65,20 @@ function MemberCard({ empId, isLead, teamColor }: { empId: string; isLead: boole
   const navigate = useNavigate()
   const emp = EMPLOYEE_MAP[empId]
   if (!emp) return null
+
+  const empProjects = emp.projects
+    .map(pid => PROJECTS.find(p => p.id === pid))
+    .filter(Boolean)
+  const firstProject = empProjects[0]
+
   return (
     <div
       onClick={() => navigate(peopleProfile(emp.id))}
       style={{
-        display: 'flex', alignItems: 'center', gap: 12,
+        display: 'grid',
+        gridTemplateColumns: '36px minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.2fr) 130px',
+        alignItems: 'center',
+        gap: 14,
         padding: '12px 16px', borderRadius: 10,
         border: `1px solid ${isLead ? teamColor + '40' : '#F3F4F6'}`,
         background: isLead ? teamColor + '08' : '#FAFAFA',
@@ -77,6 +87,7 @@ function MemberCard({ empId, isLead, teamColor }: { empId: string; isLead: boole
       onMouseEnter={e => { e.currentTarget.style.background = teamColor + '12'; e.currentTarget.style.borderColor = teamColor + '60' }}
       onMouseLeave={e => { e.currentTarget.style.background = isLead ? teamColor + '08' : '#FAFAFA'; e.currentTarget.style.borderColor = isLead ? teamColor + '40' : '#F3F4F6' }}
     >
+      {/* Avatar */}
       <div style={{ width: 36, height: 36, borderRadius: '50%', background: emp.bg, color: emp.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, position: 'relative' }}>
         {emp.initials}
         {isLead && (
@@ -85,13 +96,37 @@ function MemberCard({ empId, isLead, teamColor }: { empId: string; isLead: boole
           </div>
         )}
       </div>
-      <div style={{ flex: 1, minWidth: 0 }}>
+
+      {/* Name + email */}
+      <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.name}</span>
           {isLead && <span style={{ fontSize: 10.5, fontWeight: 600, color: teamColor, flexShrink: 0 }}>Lead</span>}
         </div>
-        <div style={{ fontSize: 11.5, color: '#6B7280', marginTop: 1 }}>{emp.role}</div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+          <Mail width={10} height={10} color="#9CA3AF" />
+          <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.email}</span>
+        </div>
       </div>
+
+      {/* Role */}
+      <div style={{ fontSize: 12, fontWeight: 500, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {emp.role}
+      </div>
+
+      {/* Project + client */}
+      <div style={{ minWidth: 0 }}>
+        {firstProject ? (
+          <>
+            <div style={{ fontSize: 12, fontWeight: 500, color: '#374151', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstProject.name}</div>
+            <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{firstProject.client}</div>
+          </>
+        ) : (
+          <span style={{ fontSize: 11.5, color: '#D1D5DB' }}>—</span>
+        )}
+      </div>
+
+      {/* Status + schedule */}
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
         <StatusBadge status={emp.status} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: '#9CA3AF' }}>
@@ -319,6 +354,139 @@ function EditTeamModal({ team, onClose, onSave }: { team: TeamRecord; onClose: (
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
+type Tab = 'overview' | 'activity' | 'time'
+
+const TABS: { id: Tab; label: string; icon: React.ReactNode }[] = [
+  { id: 'overview',  label: 'Overview',     icon: <Users width={13} height={13} /> },
+  { id: 'activity',  label: 'Activity',     icon: <Activity width={13} height={13} /> },
+  { id: 'time',      label: 'Time Details', icon: <Timer width={13} height={13} /> },
+]
+
+// ── Accordion member header ───────────────────────────────────────────────────
+
+const STATUS_STYLES_ACC = {
+  active:     { bg: '#DCFCE7', color: '#16A34A', dot: '#16A34A', label: 'Active' },
+  inactive:   { bg: '#F3F4F6', color: '#6B7280', dot: '#9CA3AF', label: 'Inactive' },
+  onboarding: { bg: '#FEF9C3', color: '#A16207', dot: '#CA8A04', label: 'Onboarding' },
+}
+
+function AccordionMemberHeader({
+  empId, teamColor, open, onToggle, isLead,
+}: { empId: string; teamColor: string; open: boolean; onToggle: () => void; isLead: boolean }) {
+  const navigate = useNavigate()
+  const emp = EMPLOYEE_MAP[empId]
+  if (!emp) return null
+  const sc = STATUS_STYLES_ACC[emp.status]
+  return (
+    <div
+      style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', cursor: 'pointer', background: open ? teamColor + '06' : '#fff', transition: 'background 0.12s', borderBottom: open ? `1px solid ${teamColor}20` : '1px solid transparent' }}
+      onClick={onToggle}
+    >
+      {/* Avatar */}
+      <div style={{ width: 36, height: 36, borderRadius: '50%', background: emp.bg, color: emp.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, position: 'relative' }}>
+        {emp.initials}
+        {isLead && (
+          <div style={{ position: 'absolute', bottom: -3, right: -3, width: 14, height: 14, borderRadius: '50%', background: teamColor, border: '2px solid #fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Crown width={7} height={7} color="#fff" />
+          </div>
+        )}
+      </div>
+      {/* Name + role */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 13.5, fontWeight: 700, color: '#111827' }}>{emp.name}</span>
+          {isLead && <span style={{ fontSize: 10.5, fontWeight: 600, color: teamColor }}>Lead</span>}
+        </div>
+        <div style={{ fontSize: 12, color: '#6B7280', marginTop: 1 }}>{emp.role}</div>
+      </div>
+      {/* Status badge */}
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 9px', borderRadius: 99, fontSize: 11, fontWeight: 600, background: sc.bg, color: sc.color, flexShrink: 0 }}>
+        <span style={{ width: 5, height: 5, borderRadius: '50%', background: sc.dot }} />{sc.label}
+      </span>
+      {/* View profile link */}
+      <button
+        onClick={e => { e.stopPropagation(); navigate(peopleProfile(emp.id)) }}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 10px', borderRadius: 6, border: '1px solid #E5E7EB', background: '#fff', fontSize: 11.5, fontWeight: 600, color: '#6C63FF', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#F5F3FF'; e.currentTarget.style.borderColor = '#C4B5FD' }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#E5E7EB' }}
+      >
+        Profile <ExternalLink width={10} height={10} />
+      </button>
+      {/* Chevron */}
+      <div style={{ color: '#9CA3AF', flexShrink: 0 }}>
+        {open ? <ChevronUp width={16} height={16} /> : <ChevronDown width={16} height={16} />}
+      </div>
+    </div>
+  )
+}
+
+// ── Activity tab ──────────────────────────────────────────────────────────────
+
+function ActivityTab({ memberIds, teamColor, leadId }: { memberIds: string[]; teamColor: string; leadId: string | null }) {
+  const [openId, setOpenId] = useState<string | null>(memberIds[0] ?? null)
+  const members = memberIds.map(id => EMPLOYEE_MAP[id]).filter(Boolean)
+
+  if (members.length === 0) {
+    return <Card><div style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '24px 0' }}>No members yet.</div></Card>
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {members.map(emp => {
+        const open = openId === emp.id
+        return (
+          <div key={emp.id} style={{ background: '#fff', border: `1px solid ${open ? teamColor + '30' : '#E8E8E8'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color 0.15s' }}>
+            <AccordionMemberHeader empId={emp.id} teamColor={teamColor} open={open} onToggle={() => setOpenId(open ? null : emp.id)} isLead={emp.id === leadId} />
+            {open && (
+              <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, background: '#FAFAFA' }}>
+                <TodaysScreenshotsWidget
+                  workerName={emp.name}
+                  workerId={emp.id}
+                  projects={emp.projects}
+                  workerColor={emp.fg}
+                />
+                <WorkSessionsWidget empId={emp.id} projects={emp.projects} />
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Time Details tab ──────────────────────────────────────────────────────────
+
+function TimeDetailsTab({ memberIds, teamColor, leadId }: { memberIds: string[]; teamColor: string; leadId: string | null }) {
+  const [openId, setOpenId] = useState<string | null>(memberIds[0] ?? null)
+  const members = memberIds.map(id => EMPLOYEE_MAP[id]).filter(Boolean)
+
+  if (members.length === 0) {
+    return <Card><div style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '24px 0' }}>No members yet.</div></Card>
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      {members.map(emp => {
+        const open = openId === emp.id
+        return (
+          <div key={emp.id} style={{ background: '#fff', border: `1px solid ${open ? teamColor + '30' : '#E8E8E8'}`, borderRadius: 12, overflow: 'hidden', transition: 'border-color 0.15s' }}>
+            <AccordionMemberHeader empId={emp.id} teamColor={teamColor} open={open} onToggle={() => setOpenId(open ? null : emp.id)} isLead={emp.id === leadId} />
+            {open && (
+              <div style={{ padding: '20px 24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start', background: '#FAFAFA' }}>
+                <div style={{ minWidth: 0 }}><TimesheetWidget empId={emp.id} workerColor={teamColor} /></div>
+                <div style={{ minWidth: 0 }}><ScheduleCard emp={emp} /></div>
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export function TeamDetailPage() {
   const { teamId } = useParams<{ teamId: string }>()
   const navigate = useNavigate()
@@ -326,6 +494,7 @@ export function TeamDetailPage() {
   const initial = teamId ? TEAM_MAP[teamId] : undefined
   const [team, setTeam] = useState<TeamRecord | undefined>(initial)
   const [editing, setEditing] = useState(false)
+  const [activeTab, setActiveTab] = useState<Tab>('overview')
 
   if (!team) {
     return (
@@ -416,12 +585,58 @@ export function TeamDetailPage() {
           </div>
         </Card>
 
-        {/* ── Content ── */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
+        {/* ── Tabs ── */}
+        <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid #E5E7EB', paddingBottom: 0 }}>
+          {TABS.map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: '8px 8px 0 0',
+                border: '1px solid transparent', borderBottom: 'none',
+                background: activeTab === tab.id ? '#fff' : 'transparent',
+                fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 500,
+                color: activeTab === tab.id ? team.color : '#6B7280',
+                cursor: 'pointer', fontFamily: 'inherit',
+                marginBottom: activeTab === tab.id ? -1 : 0,
+                borderColor: activeTab === tab.id ? '#E5E7EB' : 'transparent',
+                borderBottomColor: activeTab === tab.id ? '#fff' : 'transparent',
+                transition: 'color 0.12s',
+              }}
+              onMouseEnter={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#374151' }}
+              onMouseLeave={e => { if (activeTab !== tab.id) e.currentTarget.style.color = '#6B7280' }}
+            >
+              {tab.icon}{tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* ── Tab: Activity ── */}
+        {activeTab === 'activity' && (
+          <ActivityTab memberIds={sortedMemberIds} teamColor={team.color} leadId={team.leadId ?? null} />
+        )}
+
+        {/* ── Tab: Time Details ── */}
+        {activeTab === 'time' && (
+          <TimeDetailsTab memberIds={sortedMemberIds} teamColor={team.color} leadId={team.leadId ?? null} />
+        )}
+
+        {/* ── Tab: Overview ── */}
+        {activeTab === 'overview' && <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 20, alignItems: 'start' }}>
 
           {/* Members */}
           <Card>
             <SectionTitle>Members ({team.memberIds.length})</SectionTitle>
+            {team.memberIds.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: '36px minmax(0,1.8fr) minmax(0,1fr) minmax(0,1.2fr) 130px', gap: 14, padding: '0 16px 8px', marginBottom: 4, borderBottom: '1px solid #F3F4F6' }}>
+                <div />
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Member</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Role</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Project</div>
+                <div style={{ fontSize: 10.5, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase', textAlign: 'right' }}>Status</div>
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {sortedMemberIds.map(id => (
                 <MemberCard key={id} empId={id} isLead={id === team.leadId} teamColor={team.color} />
@@ -442,7 +657,7 @@ export function TeamDetailPage() {
               )}
             </div>
           </Card>
-        </div>
+        </div>}
       </div>
 
       {editing && (

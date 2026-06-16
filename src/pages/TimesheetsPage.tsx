@@ -31,7 +31,7 @@ interface TimeEntry {
   notes?: string; edit_log: EditLogItem[]
 }
 
-interface Worker { id: string; name: string; initials: string; color: string; bg: string; client: string; team: string }
+interface Worker { id: string; name: string; initials: string; color: string; bg: string; client: string; team: string; weeklyLimit?: number; dailyLimit?: number }
 interface Team   { id: string; name: string; client: string; workerIds: string[] }
 
 // ─────────────────────────────────────────────────────────────
@@ -81,12 +81,12 @@ function uid() { return `e${_uid++}` }
 // ─────────────────────────────────────────────────────────────
 
 const WORKERS: Worker[] = [
-  { id: 'w1', name: 'Alice Chen',    initials: 'AC', color: '#6C63FF', bg: '#EEEDFF', client: 'Acme Corp',         team: 't1' },
-  { id: 'w2', name: 'Bob Martinez',  initials: 'BM', color: '#3B82F6', bg: '#EFF6FF', client: 'Acme Corp',         team: 't1' },
+  { id: 'w1', name: 'Alice Chen',    initials: 'AC', color: '#6C63FF', bg: '#EEEDFF', client: 'Acme Corp',         team: 't1', weeklyLimit: 40, dailyLimit: 8  },
+  { id: 'w2', name: 'Bob Martinez',  initials: 'BM', color: '#3B82F6', bg: '#EFF6FF', client: 'Acme Corp',         team: 't1', weeklyLimit: 40 },
   { id: 'w3', name: 'Carmen Santos', initials: 'CS', color: '#06B6D4', bg: '#ECFEFF', client: 'Acme Corp',         team: 't1' },
-  { id: 'w4', name: 'David Kim',     initials: 'DK', color: '#F59E0B', bg: '#FFFBEB', client: 'Global Industries', team: 't2' },
+  { id: 'w4', name: 'David Kim',     initials: 'DK', color: '#F59E0B', bg: '#FFFBEB', client: 'Global Industries', team: 't2', weeklyLimit: 40, dailyLimit: 8  },
   { id: 'w5', name: 'Elena Patel',   initials: 'EP', color: '#EC4899', bg: '#FDF2F8', client: 'Global Industries', team: 't2' },
-  { id: 'w6', name: 'Frank Osei',    initials: 'FO', color: '#10B981', bg: '#F0FDF4', client: 'Global Industries', team: 't2' },
+  { id: 'w6', name: 'Frank Osei',    initials: 'FO', color: '#10B981', bg: '#F0FDF4', client: 'Global Industries', team: 't2', weeklyLimit: 45 },
 ]
 const TEAMS: Team[] = [
   { id: 't1', name: 'Development', client: 'Acme Corp',         workerIds: ['w1','w2','w3'] },
@@ -971,25 +971,50 @@ function WeeklyGrid({
           </thead>
           <tbody>
             {workers.map((w, wi) => {
-              const total = workerTotalMins(w.id)
+              const total         = workerTotalMins(w.id)
+              const wkLimitMins   = w.weeklyLimit != null ? w.weeklyLimit * 60 : null
+              const dayLimitMins  = w.dailyLimit  != null ? w.dailyLimit  * 60 : null
+              const weekPct       = wkLimitMins != null ? Math.min(total / wkLimitMins, 1) : null
+              const weekOver      = wkLimitMins != null && total > wkLimitMins
+              const weekNear      = wkLimitMins != null && !weekOver && wkLimitMins > 0 && total / wkLimitMins >= 0.8
+              const barColor      = weekOver ? '#EF4444' : weekNear ? '#F59E0B' : '#10B981'
               return (
                 <tr key={w.id} style={{ borderTop: wi === 0 ? '1px solid #F0F0F0' : '1px solid #F5F5F5' }}>
                   <td style={{ padding: '16px 20px', borderRight: '1px solid #F0F0F0' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <Avatar w={w} size={30} />
-                      <div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{w.name}</div>
-                        <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>{w.client}</div>
+                        {wkLimitMins != null ? (
+                          <div style={{ marginTop: 4 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                              <span style={{ fontSize: 10.5, fontWeight: 600, color: weekOver ? '#EF4444' : weekNear ? '#F59E0B' : '#6B7280' }}>
+                                {fmtDur(total)}
+                                <span style={{ color: '#D1D5DB', fontWeight: 400 }}> / {w.weeklyLimit}h</span>
+                              </span>
+                              {weekOver && <span style={{ fontSize: 9, fontWeight: 700, color: '#EF4444', letterSpacing: '0.04em' }}>OVER</span>}
+                            </div>
+                            <div style={{ height: 3, borderRadius: 2, background: '#F3F4F6', overflow: 'hidden' }}>
+                              <div style={{ height: '100%', width: `${(weekPct ?? 0) * 100}%`, background: barColor, borderRadius: 2 }} />
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>{w.client}</div>
+                        )}
                       </div>
                     </div>
                   </td>
                   {days.map((day, i) => {
-                    const mins = workerDayMins(w.id, day)
-                    const isWeekend = i >= 5
-                    const key = `${w.id}_${day}`
+                    const mins       = workerDayMins(w.id, day)
+                    const isWeekend  = i >= 5
+                    const key        = `${w.id}_${day}`
                     const dayEntries = cellEntries(w.id, day)
-                    const isOpen = openCell?.key === key
+                    const isOpen     = openCell?.key === key
                     const hasBillable = dayEntries.some(e => e.billable && e.entry_type === 'normal')
+                    const dayOver    = dayLimitMins != null && mins > dayLimitMins
+                    const dayNear    = dayLimitMins != null && !dayOver && mins > 0 && mins / dayLimitMins >= 0.9
+                    const dayTint    = isOpen ? '#EEEDFF' : dayOver ? '#FEF2F2' : dayNear ? '#FFFBEB' : isWeekend ? '#FAFAFA' : '#fff'
+                    const dotColor   = dayOver ? '#EF4444' : dayNear ? '#F59E0B' : null
                     return (
                       <td
                         key={day}
@@ -1000,20 +1025,49 @@ function WeeklyGrid({
                         }}
                         style={{
                           ...cellStyle,
-                          background: isOpen ? '#EEEDFF' : isWeekend ? '#FAFAFA' : '#fff',
+                          padding: '12px 8px',
+                          position: 'relative',
+                          background: dayTint,
                           color: mins > 0 ? (isOpen ? '#6C63FF' : '#374151') : '#D1D5DB',
                           cursor: mins > 0 ? 'pointer' : 'default',
                           transition: 'background 0.1s',
+                          verticalAlign: 'middle',
                         }}
                       >
-                        <span style={{ fontWeight: isOpen ? 600 : 400 }}>
+                        {/* Time value */}
+                        <div style={{ fontWeight: isOpen ? 600 : 400, fontSize: 13.5, lineHeight: 1 }}>
                           {mins > 0 ? fmtDurHMS(mins) : '–'}
-                        </span>
-                        {hasBillable && mins > 0 && (
-                          <HoverTooltip label="Billable">
-                            <span style={{ color: '#9CA3AF', marginLeft: 4, fontSize: 12, cursor: 'default' }}>$</span>
-                          </HoverTooltip>
+                          {hasBillable && mins > 0 && (
+                            <HoverTooltip label="Billable">
+                              <span style={{ color: '#9CA3AF', marginLeft: 4, fontSize: 12, cursor: 'default' }}>$</span>
+                            </HoverTooltip>
+                          )}
+                        </div>
+
+                        {/* Daily limit badge */}
+                        {dayLimitMins != null && mins > 0 && (dayOver || dayNear) && (() => {
+                          const limitH = w.dailyLimit!
+                          const loggedH = +(mins / 60).toFixed(1)
+                          const overMins = mins - dayLimitMins
+                          const overH = +(overMins / 60).toFixed(1)
+                          const bg   = dayOver ? '#FEE2E2' : '#FEF3C7'
+                          const fg   = dayOver ? '#DC2626' : '#D97706'
+                          return (
+                            <div style={{ marginTop: 5, display: 'inline-flex', alignItems: 'center', gap: 3, background: bg, color: fg, borderRadius: 4, padding: '2px 6px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                              {dayOver
+                                ? <>+{overH}h over {limitH}h</>
+                                : <>{loggedH}h / {limitH}h</>}
+                            </div>
+                          )
+                        })()}
+
+                        {/* Show limit reference even on normal days when a limit exists */}
+                        {dayLimitMins != null && mins > 0 && !dayOver && !dayNear && (
+                          <div style={{ marginTop: 4, fontSize: 10, color: '#D1D5DB', whiteSpace: 'nowrap' }}>
+                            / {w.dailyLimit}h
+                          </div>
                         )}
+
                         {isOpen && openCell && dayEntries.length > 0 && (
                           <CellPopover
                             cellEntries={dayEntries}
@@ -1028,8 +1082,25 @@ function WeeklyGrid({
                       </td>
                     )
                   })}
-                  <td style={{ ...cellStyle, borderRight: 'none', fontWeight: 600, color: total > 0 ? '#374151' : '#D1D5DB' }}>
-                    {total > 0 ? fmtDurHMS(total) : '–'}
+                  <td style={{
+                    ...cellStyle, padding: '12px 8px', borderRight: 'none', fontWeight: 700,
+                    color: weekOver ? '#EF4444' : weekNear ? '#F59E0B' : total > 0 ? '#374151' : '#D1D5DB',
+                    background: weekOver ? '#FEF2F2' : weekNear ? '#FFFBEB' : undefined,
+                  }}>
+                    <div style={{ fontSize: 13.5, lineHeight: 1 }}>{total > 0 ? fmtDurHMS(total) : '–'}</div>
+                    {wkLimitMins != null && total > 0 && (
+                      <div style={{ marginTop: 5 }}>
+                        {weekOver ? (
+                          <span style={{ display: 'inline-flex', alignItems: 'center', background: '#FEE2E2', color: '#DC2626', borderRadius: 4, padding: '2px 6px', fontSize: 10.5, fontWeight: 700, whiteSpace: 'nowrap' }}>
+                            +{fmtDur(total - wkLimitMins)} over
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 10.5, color: weekNear ? '#D97706' : '#9CA3AF', fontWeight: weekNear ? 600 : 400, whiteSpace: 'nowrap' }}>
+                            {fmtDur(total)} / {w.weeklyLimit}h
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               )

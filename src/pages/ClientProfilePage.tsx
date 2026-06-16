@@ -285,47 +285,80 @@ export function ClientProfilePage() {
             {filteredMembers.length === 0 ? (
               <div style={{ color: '#9CA3AF', fontSize: 13 }}>{allMembers.length === 0 ? 'No members assigned.' : 'No matches.'}</div>
             ) : (
-              <div style={{ overflowY: 'auto', maxHeight: 380, display: 'flex', flexDirection: 'column', gap: 8, paddingRight: 2 }}>
-                {filteredMembers.map(emp => {
-                  const empProjects = allProjects.filter(p => p.memberIds.includes(emp.id.replace('e', 'm')))
-                  const empHours = getMemberHoursForClient(emp.id)
-                  return (
-                    <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 8, border: '1px solid #F3F4F6', background: '#FAFAFA' }}>
-                      <InitialAvatar name={emp.name} bg={emp.bg} fg={emp.fg} />
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                          <Link to={peopleProfile(emp.id)}
-                            style={{ fontSize: 13.5, fontWeight: 600, color: '#111827', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#6C63FF')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#111827')}
-                          >
-                            {emp.name}
-                          </Link>
-                          <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusDot[emp.status] ?? '#9CA3AF', flexShrink: 0 }} />
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: '#6B7280', marginBottom: 2 }}>
-                          <Mail width={11} height={11} />
-                          <a href={`mailto:${emp.email}`} style={{ color: '#6B7280', textDecoration: 'none' }}
-                            onMouseEnter={e => (e.currentTarget.style.color = '#6C63FF')}
-                            onMouseLeave={e => (e.currentTarget.style.color = '#6B7280')}
-                          >
-                            {emp.email}
-                          </a>
-                        </div>
-                        <div style={{ fontSize: 12, color: '#6B7280' }}>
-                          {emp.role}
-                          {empProjects.length > 0 && <span style={{ color: '#9CA3AF' }}> · {empProjects.map(p => p.name).join(', ')}</span>}
-                        </div>
-                      </div>
-                      {empHours > 0 && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#6B7280', flexShrink: 0, background: '#F3F4F6', borderRadius: 6, padding: '3px 8px' }}>
-                          <Clock width={11} height={11} />
-                          {empHours}h
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
+              <div style={{ overflowY: 'auto', maxHeight: 380 }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Member', 'Role', 'Projects', 'Hours'].map(h => (
+                        <th key={h} style={{ textAlign: h === 'Hours' ? 'right' : 'left', padding: '0 10px 8px', fontSize: 11.5, fontWeight: 600, color: '#9CA3AF', borderBottom: '1px solid #F3F4F6', whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMembers.map((emp, i) => {
+                      const empProjects = allProjects.filter(p => p.memberIds.includes(emp.id.replace('e', 'm')))
+                      const empHours = getMemberHoursForClient(emp.id)
+                      return (
+                        <tr key={emp.id} style={{ background: i % 2 === 1 ? '#FAFAFA' : '#fff' }}>
+                          {/* Member */}
+                          <td style={{ padding: '9px 10px', verticalAlign: 'middle' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <InitialAvatar name={emp.name} bg={emp.bg} fg={emp.fg} />
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <Link to={peopleProfile(emp.id)}
+                                    style={{ fontSize: 13, fontWeight: 600, color: '#111827', textDecoration: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                    onMouseEnter={e => (e.currentTarget.style.color = '#6C63FF')}
+                                    onMouseLeave={e => (e.currentTarget.style.color = '#111827')}
+                                  >
+                                    {emp.name}
+                                  </Link>
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: statusDot[emp.status] ?? '#9CA3AF', flexShrink: 0 }} />
+                                </div>
+                                <a href={`mailto:${emp.email}`} style={{ fontSize: 11.5, color: '#9CA3AF', textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 3 }}
+                                  onMouseEnter={e => (e.currentTarget.style.color = '#6C63FF')}
+                                  onMouseLeave={e => (e.currentTarget.style.color = '#9CA3AF')}
+                                >
+                                  <Mail width={10} height={10} />{emp.email}
+                                </a>
+                              </div>
+                            </div>
+                          </td>
+                          {/* Role */}
+                          <td style={{ padding: '9px 10px', fontSize: 12.5, color: '#374151', whiteSpace: 'nowrap', verticalAlign: 'middle' }}>
+                            {emp.role}
+                          </td>
+                          {/* Projects */}
+                          <td style={{ padding: '9px 10px', verticalAlign: 'middle' }}>
+                            {empProjects.length === 0 ? (
+                              <span style={{ fontSize: 12, color: '#D1D5DB' }}>—</span>
+                            ) : (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                                {empProjects.map(p => (
+                                  <Link key={p.id} to={`${ROUTES.projects}/${p.id}`}
+                                    style={{ fontSize: 11.5, fontWeight: 500, padding: '2px 7px', borderRadius: 99, background: p.active ? '#EFF6FF' : '#F3F4F6', color: p.active ? '#1D4ED8' : '#6B7280', textDecoration: 'none', whiteSpace: 'nowrap' }}
+                                    onMouseEnter={e => (e.currentTarget.style.opacity = '0.75')}
+                                    onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+                                  >
+                                    {p.name}
+                                  </Link>
+                                ))}
+                              </div>
+                            )}
+                          </td>
+                          {/* Hours */}
+                          <td style={{ padding: '9px 10px', textAlign: 'right', verticalAlign: 'middle' }}>
+                            {empHours > 0 && (
+                              <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#6B7280', background: '#F3F4F6', borderRadius: 6, padding: '3px 8px' }}>
+                                <Clock width={10} height={10} />{empHours}h
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
               </div>
             )}
           </Card>

@@ -45,6 +45,23 @@ export interface ShiftMove {
   createdAt: string
 }
 
+export interface AdjustmentSlot {
+  dateFrom: string  // YYYY-MM-DD
+  dateTo: string    // YYYY-MM-DD (same as dateFrom for single day)
+  start: string     // HH:mm
+  end: string       // HH:mm
+}
+
+export interface ScheduleAdjustment {
+  id: string
+  employeeId: string
+  originalDates: string[]      // YYYY-MM-DD[] — dates being replaced/skipped
+  replacementSlots: AdjustmentSlot[]  // new work slots (can be multiple for splits)
+  reason: string
+  status: 'pending' | 'approved' | 'rejected'
+  createdAt: string
+}
+
 export interface Employee {
   id: string
   name: string
@@ -65,6 +82,7 @@ export interface Employee {
   homeTimezone: string      // IANA tz, worker's own clock
   note?: string
   shiftMoves?: ShiftMove[]
+  scheduleAdjustments?: ScheduleAdjustment[]
   // People page fields
   employmentType: EmploymentType
   payType: PayType
@@ -72,6 +90,10 @@ export interface Employee {
   payRate: number           // USD/hr or USD/month depending on payType
   timeTrackingEnabled: boolean
   dateJoined: string        // YYYY-MM-DD
+  scheduleLimit?: {
+    weeklyHours?: number    // max hours per week, e.g. 40
+    dailyHours?: number     // max hours per day, e.g. 8
+  }
 }
 
 // Returns today's (or a given day's) scheduled hours for a fixed employee.
@@ -130,11 +152,34 @@ function emp(
   return { id, name, email, initials, bg, fg, role, team, clientId, status, scheduleType, shiftStartUTC, shiftEndUTC, overlapBlocks, projects, homeTimezone, employmentType, payType, billRate, payRate, timeTrackingEnabled, dateJoined }
 }
 
+export const SCHEDULE_ADJUSTMENTS: ScheduleAdjustment[] = [
+  {
+    // Maria is covering for a colleague this week — shifted to earlier hours Jun 16–20
+    id: 'adj-001',
+    employeeId: 'e001',
+    originalDates: ['2026-06-16', '2026-06-17', '2026-06-18', '2026-06-19', '2026-06-20'],
+    replacementSlots: [{ dateFrom: '2026-06-16', dateTo: '2026-06-20', start: '07:00', end: '15:00' }],
+    reason: 'Covering early-morning handoff for a colleague on leave this week — temporarily shifted to 7am–3pm',
+    status: 'approved',
+    createdAt: '2026-06-12T09:00:00Z',
+  },
+  {
+    // James swapping one day
+    id: 'adj-002',
+    employeeId: 'e002',
+    originalDates: ['2026-06-16'],
+    replacementSlots: [{ dateFrom: '2026-06-20', dateTo: '2026-06-20', start: '09:00', end: '17:00' }],
+    reason: 'Taking Monday off for a medical appointment, making it up on Saturday',
+    status: 'approved',
+    createdAt: '2026-06-11T14:00:00Z',
+  },
+]
+
 export const EMPLOYEES: Employee[] = [
   // ── Acme Corp ──────────────────────────────────────────────────────────────
   //                id        name              email                              ini   bg         fg         role                  team            clientId     status      sched          sUTC eUTC overlap                                                                                               projects                                    tz                  empType        payType    bill  pay     tt      joined
-  emp('e001','Maria Santos',    'maria.santos@abroadworks.com',    'MS','#DBEAFE','#1E40AF','Operations Manager',  'abroadworker','cl-acme',    'active',     'fixed',        14,22,[],                                                                           ['Internal Ops','HR Processes'],            'America/New_York', 'full-time',  'monthly',  85,  5200, true,  '2021-03-15'),
-  emp('e002','James Rivera',    'james.rivera@abroadworks.com',    'JR','#D1FAE5','#065F46','Backend Engineer',    'abroadworker','cl-acme',    'active',     'fixed',        14,22,[],                                                                           ['API Integration','Mobile App v2'],        'America/New_York', 'full-time',  'hourly',   90,  45,   true,  '2021-06-01'),
+  { ...emp('e001','Maria Santos',    'maria.santos@abroadworks.com',    'MS','#DBEAFE','#1E40AF','Operations Manager',  'abroadworker','cl-acme',    'active',     'fixed',        14,22,[],                                                                           ['Internal Ops','HR Processes'],            'America/New_York', 'full-time',  'monthly',  85,  5200, true,  '2021-03-15'), scheduleAdjustments: SCHEDULE_ADJUSTMENTS.filter(a => a.employeeId === 'e001') },
+  { ...emp('e002','James Rivera',    'james.rivera@abroadworks.com',    'JR','#D1FAE5','#065F46','Backend Engineer',    'abroadworker','cl-acme',    'active',     'fixed',        14,22,[],                                                                           ['API Integration','Mobile App v2'],        'America/New_York', 'full-time',  'hourly',   90,  45,   true,  '2021-06-01'), scheduleAdjustments: SCHEDULE_ADJUSTMENTS.filter(a => a.employeeId === 'e002') },
   emp('e003','Carla Reyes',     'carla.reyes@abroadworks.com',     'CR','#FEF3C7','#92400E','Product Designer',    'abroadworker','cl-acme',    'active',     'free-overlap', null,null,[{label:'Design sync',startUTC:15,endUTC:16},{label:'Sprint review',startUTC:18,endUTC:19}], ['Dashboard UI','Client Portal Redesign'],  'America/New_York', 'full-time',  'hourly',   75,  38,   true,  '2022-01-10'),
   emp('e004','Tom Nguyen',      'tom.nguyen@abroadworks.com',      'TN','#EDE9FE','#5B21B6','Project Manager',     'abroadworker','cl-acme',    'active',     'free',         null,null,[],                                                                           ['Website Redesign','Security Audit'],      'America/New_York', 'full-time',  'monthly',  95,  6000, false, '2020-11-20'),
   emp('e005','Grace Kim',       'grace.kim@abroadworks.com',       'GK','#FAEEDA','#633806','QA Lead',             'abroadworker','cl-acme',    'active',     'fixed',        14,22,[],                                                                           ['Mobile App QA'],                          'America/New_York', 'full-time',  'hourly',   65,  32,   true,  '2022-04-05'),

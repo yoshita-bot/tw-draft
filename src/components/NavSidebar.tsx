@@ -5,7 +5,7 @@ import {
   CalendarDays, BarChart2, CreditCard, Users, Settings,
   Camera, Monitor, Star, CheckSquare, UserCheck, UserCog,
   Trash2, TrendingUp, Calendar, Building2, ChevronDown,
-  DollarSign, ClipboardList, Shield,
+  DollarSign, ClipboardList, Shield, SlidersHorizontal,
 } from 'lucide-react'
 import { ROUTES } from '../lib/routes'
 
@@ -69,7 +69,8 @@ const NAV_ITEMS: NavItem[] = [
     children: [
       { icon: Settings, label: 'Organization',     path: ROUTES.settings          },
       { icon: UserCog,  label: 'Employees',        path: ROUTES.settingsEmployees },
-      { icon: Shield,   label: 'Security & Login', path: ROUTES.settingsSecurity  },
+      { icon: Shield,              label: 'Security & Login', path: ROUTES.settingsSecurity      },
+      { icon: SlidersHorizontal,   label: 'Member Configurations',   path: ROUTES.settingsTrackingRules },
     ],
   },
 ]
@@ -173,7 +174,7 @@ export function NavSidebar() {
         onClick={e => { e.preventDefault(); navigate(child.path) }}
       >
         <ChildIcon width={13} height={13} strokeWidth={isChildActive ? 2.2 : 1.8} />
-        <span style={{ flex: 1 }}>{child.label}</span>
+        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{child.label}</span>
         {favButton(child.path)}
       </a>
     )

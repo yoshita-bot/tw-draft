@@ -1,8 +1,9 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Globe, Users, Calendar, CalendarDays,
   ChevronLeft, ChevronRight, Search, X, ChevronDown, ChevronUp,
-  Plus, Pencil, Trash2, Clock, CheckCircle2,
+  Plus, Pencil, Trash2, Clock, CheckCircle2, ArrowRightLeft, Trash,
 } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import {
@@ -10,6 +11,7 @@ import {
   TEAM_LABELS, SCHEDULE_TYPE_LABELS, fmtUTCHour, displayOffset,
   getScheduleForDay, getWorkDayList,
   type Employee, type Team, type ScheduleType, type DayOfWeek, type DaySchedule, type ShiftMove,
+  type ScheduleAdjustment, type AdjustmentSlot,
 } from '../data/employeesData'
 import { CLIENTS, CLIENT_MAP, type Client } from '../data/clientsData'
 
@@ -633,12 +635,18 @@ function WeekCellTooltip({ e, tz, label, timeStart, timeEnd }: {
 
 // ── Week cell ─────────────────────────────────────────────────────────────────
 
-function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek }: {
-  e: Employee; tz: TZKey; isToday: boolean; isWeekend: boolean; dayOfWeek: DayOfWeek
+function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek, dailyLimit }: {
+  e: Employee; tz: TZKey; isToday: boolean; isWeekend: boolean; dayOfWeek: DayOfWeek; dailyLimit?: number
 }) {
   const [hoveredBar, setHoveredBar] = useState<number | 'fixed' | null>(null)
   const c   = SCHED_COLOR
   const win = cellWindow(e, tz)
+
+  const dayHours = calcDayHours(e, dayOfWeek)
+  const dailyOver   = dailyLimit != null && dayHours > dailyLimit
+  const dailyNear   = dailyLimit != null && !dailyOver && dayHours > 0 && dayHours / dailyLimit >= 0.9
+  const dailyTint   = dailyOver ? '#FEF2F2' : dailyNear ? '#FFFBEB' : undefined
+  const dailyDotBg  = dailyOver ? '#EF4444' : dailyNear ? '#F59E0B' : undefined
 
   if (e.scheduleType === 'fixed') {
     const daySched = getScheduleForDay(e, dayOfWeek)
@@ -659,9 +667,13 @@ function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek }: {
     return (
       <div style={{
         position: 'relative', height: 52,
-        background: isToday ? '#FAFAFE' : isWeekend ? '#FAFAFA' : undefined,
+        background: dailyTint ?? (isToday ? '#FAFAFE' : isWeekend ? '#FAFAFA' : undefined),
         borderLeft: '1px solid #F3F4F6', padding: '0 4px',
       }}>
+        {dailyDotBg && (
+          <div title={dailyOver ? `Exceeds ${dailyLimit}h/day limit (${dayHours}h)` : `Near ${dailyLimit}h/day limit (${dayHours}h)`}
+            style={{ position: 'absolute', top: 5, right: 6, width: 6, height: 6, borderRadius: '50%', background: dailyDotBg, zIndex: 2 }} />
+        )}
         <div style={{ position: 'absolute', top: '50%', left: 4, right: 4, height: 3, marginTop: -1.5, background: '#F3F4F6', borderRadius: 2 }} />
         <div
           onMouseEnter={() => setHoveredBar('fixed')}
@@ -682,9 +694,13 @@ function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek }: {
   return (
     <div style={{
       position: 'relative', height: 52,
-      background: isToday ? '#FAFAFE' : isWeekend ? '#FAFAFA' : undefined,
+      background: dailyTint ?? (isToday ? '#FAFAFE' : isWeekend ? '#FAFAFA' : undefined),
       borderLeft: '1px solid #F3F4F6', padding: '0 4px',
     }}>
+      {dailyDotBg && (
+        <div title={dailyOver ? `Exceeds ${dailyLimit}h/day limit (${dayHours}h)` : `Near ${dailyLimit}h/day limit (${dayHours}h)`}
+          style={{ position: 'absolute', top: 5, right: 6, width: 6, height: 6, borderRadius: '50%', background: dailyDotBg, zIndex: 2 }} />
+      )}
       {e.scheduleType !== 'free' && (
         <div style={{ position: 'absolute', top: '50%', left: 4, right: 4, height: 3, marginTop: -1.5, background: '#F3F4F6', borderRadius: 2 }} />
       )}
@@ -714,6 +730,24 @@ function WeekCell({ e, tz, isToday, isWeekend, dayOfWeek }: {
   )
 }
 
+// ── Limit helpers ─────────────────────────────────────────────────────────────
+
+function calcDayHours(e: Employee, dow: DayOfWeek): number {
+  if (e.scheduleType === 'fixed') {
+    const s = getScheduleForDay(e, dow)
+    if (!s) return 0
+    return ((s.endUTC - s.startUTC) + 24) % 24
+  }
+  if (e.scheduleType === 'free-overlap') {
+    return e.overlapBlocks.reduce((sum, b) => sum + (((b.endUTC - b.startUTC) + 24) % 24), 0)
+  }
+  return 0
+}
+
+function calcWeekHours(e: Employee, days: Date[]): number {
+  return days.reduce((sum, d) => sum + calcDayHours(e, d.getDay() as DayOfWeek), 0)
+}
+
 // ── Week view ─────────────────────────────────────────────────────────────────
 
 function WeekView({ employees, tz, weekOffset, onView }: { employees: Employee[]; tz: TZKey; weekOffset: number; onView: (e: Employee) => void }) {
@@ -737,37 +771,62 @@ function WeekView({ employees, tz, weekOffset, onView }: { employees: Employee[]
       </div>
 
       {/* Employee rows */}
-      {employees.map((e, idx) => (
-        <div
-          key={e.id}
-          onClick={() => onView(e)}
-          title="View schedule"
-          style={{ display: 'grid', gridTemplateColumns: '200px repeat(7, 1fr)', borderBottom: idx < employees.length - 1 ? '1px solid #F9FAFB' : undefined, cursor: 'pointer' }}
-          onMouseEnter={ev => { ev.currentTarget.style.background = '#FAFAFE' }}
-          onMouseLeave={ev => { ev.currentTarget.style.background = '' }}
-        >
-          {/* Name cell */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', height: 52, boxSizing: 'border-box' }}>
-            <Avatar e={e} size={26} />
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
-              <ClientBadge clientId={e.clientId} small />
+      {employees.map((e, idx) => {
+        const weeklyLimit  = e.scheduleLimit?.weeklyHours
+        const dailyLimit   = e.scheduleLimit?.dailyHours
+        const weekHours    = weeklyLimit != null ? calcWeekHours(e, days) : 0
+        const weekPct      = weeklyLimit != null ? Math.min(weekHours / weeklyLimit, 1) : 0
+        const weekOver     = weeklyLimit != null && weekHours > weeklyLimit
+        const weekNear     = weeklyLimit != null && !weekOver && weekHours / weeklyLimit >= 0.8
+        const barColor     = weekOver ? '#EF4444' : weekNear ? '#F59E0B' : '#10B981'
+        return (
+          <div
+            key={e.id}
+            onClick={() => onView(e)}
+            title="View schedule"
+            style={{ display: 'grid', gridTemplateColumns: '200px repeat(7, 1fr)', borderBottom: idx < employees.length - 1 ? '1px solid #F9FAFB' : undefined, cursor: 'pointer' }}
+            onMouseEnter={ev => { ev.currentTarget.style.background = '#FAFAFE' }}
+            onMouseLeave={ev => { ev.currentTarget.style.background = '' }}
+          >
+            {/* Name cell */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', height: 52, boxSizing: 'border-box' }}>
+              <Avatar e={e} size={26} />
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: 11.5, fontWeight: 600, color: '#111827', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{e.name}</div>
+                {weeklyLimit != null ? (
+                  <div style={{ marginTop: 3 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                      <span style={{ fontSize: 9.5, fontWeight: 600, color: weekOver ? '#EF4444' : weekNear ? '#F59E0B' : '#6B7280' }}>
+                        {weekHours % 1 === 0 ? weekHours : weekHours.toFixed(1)}h
+                        <span style={{ color: '#D1D5DB', fontWeight: 400 }}> / {weeklyLimit}h</span>
+                      </span>
+                      {weekOver && <span style={{ fontSize: 8.5, fontWeight: 700, color: '#EF4444' }}>OVER</span>}
+                    </div>
+                    <div style={{ height: 3, borderRadius: 2, background: '#F3F4F6', overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${weekPct * 100}%`, background: barColor, borderRadius: 2, transition: 'width 0.3s' }} />
+                    </div>
+                  </div>
+                ) : (
+                  <ClientBadge clientId={e.clientId} small />
+                )}
+              </div>
+              <Pencil size={11} color="#D1D5DB" />
             </div>
-            <Pencil size={11} color="#D1D5DB" />
+            {/* Day cells */}
+            {days.map((d, di) => (
+              <WeekCell
+                key={di}
+                e={e}
+                tz={tz}
+                isToday={d.toDateString() === today.toDateString()}
+                isWeekend={di >= 5}
+                dayOfWeek={d.getDay() as DayOfWeek}
+                dailyLimit={dailyLimit}
+              />
+            ))}
           </div>
-          {/* Day cells */}
-          {days.map((d, di) => (
-            <WeekCell
-              key={di}
-              e={e}
-              tz={tz}
-              isToday={d.toDateString() === today.toDateString()}
-              isWeekend={di >= 5}
-              dayOfWeek={d.getDay() as DayOfWeek}
-            />
-          ))}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -1013,6 +1072,28 @@ function PersonDetailModal({ emp, tz, onEdit, onClose }: {
                 {emp.projects.map(p => (
                   <span key={p} style={{ fontSize: 11.5, fontWeight: 500, padding: '2px 8px', borderRadius: 5, background: '#F3F4F6', color: '#374151' }}>{p}</span>
                 ))}
+              </div>
+            </DetailRow>
+          )}
+
+          {/* Schedule limits */}
+          {emp.scheduleLimit && (emp.scheduleLimit.weeklyHours != null || emp.scheduleLimit.dailyHours != null) && (
+            <DetailRow label="Hour limits">
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {emp.scheduleLimit.weeklyHours != null && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 7 }}>
+                    <Clock size={12} color="#3B82F6" />
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: '#1D4ED8' }}>{emp.scheduleLimit.weeklyHours}h</span>
+                    <span style={{ fontSize: 11, color: '#60A5FA' }}>/ week</span>
+                  </div>
+                )}
+                {emp.scheduleLimit.dailyHours != null && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: 7 }}>
+                    <Clock size={12} color="#16A34A" />
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: '#15803D' }}>{emp.scheduleLimit.dailyHours}h</span>
+                    <span style={{ fontSize: 11, color: '#4ADE80' }}>/ day</span>
+                  </div>
+                )}
               </div>
             </DetailRow>
           )}
@@ -1314,6 +1395,666 @@ function ShiftMoveSection({ emp, onAdd }: {
   )
 }
 
+// ── Adjust Schedule Modal ────────────────────────────────────────────────────
+
+function adjustmentKindLabel(origDates: string[], slots: AdjustmentSlot[]): string | null {
+  if (!origDates.length || !slots.length) return null
+  const singleOrig  = origDates.length === 1
+  const singleSlot  = slots.length === 1
+  const sameDays    = singleOrig && singleSlot && origDates[0] === slots[0].dateFrom
+  if (sameDays)                    return 'Adjusting hours on the same day'
+  if (singleOrig && singleSlot)    return 'Moving to a different day'
+  if (singleOrig && !singleSlot)   return `Splitting across ${slots.length} days`
+  if (!singleOrig && singleSlot)   return `Consolidating ${origDates.length} days into one`
+  return `Restructuring ${origDates.length} original day${origDates.length > 1 ? 's' : ''} into ${slots.length} new slot${slots.length > 1 ? 's' : ''}`
+}
+
+function totalHours(slots: AdjustmentSlot[]): number {
+  return slots.reduce((sum, s) => {
+    if (!s.dateFrom || !s.start || !s.end) return sum
+    const diff = ((parseHHMM(s.end) - parseHHMM(s.start)) + 24) % 24
+    return sum + diff
+  }, 0)
+}
+
+function DateRangePicker({ from, to, onChange, compact }: {
+  from: string
+  to: string
+  onChange: (from: string, to: string) => void
+  compact?: boolean
+}) {
+  const btnRef = useRef<HTMLButtonElement>(null)
+  const popRef = useRef<HTMLDivElement>(null)
+  const [open,      setOpen]    = useState(false)
+  const [pos,       setPos]     = useState({ top: 0, left: 0, above: false })
+  const [pFrom,     setPFrom]   = useState('')
+  const [pTo,       setPTo]     = useState('')
+  const [hovered,   setHovered] = useState('')
+  const [viewYear,  setViewYear]  = useState(new Date().getFullYear())
+  const [viewMonth, setViewMonth] = useState(new Date().getMonth())
+  const today = new Date().toISOString().slice(0, 10)
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return
+    function h(e: MouseEvent) {
+      const t = e.target as Node
+      if (!btnRef.current?.contains(t) && !popRef.current?.contains(t)) setOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [open])
+
+  function openPicker() {
+    if (!btnRef.current) return
+    const popH = 480
+    const popW = 560
+    // Find the modal's scrollable container
+    let scrollEl: HTMLElement | null = btnRef.current.parentElement as HTMLElement
+    while (scrollEl && scrollEl !== document.body) {
+      const s = window.getComputedStyle(scrollEl)
+      if (s.overflowY === 'auto' || s.overflowY === 'scroll') break
+      scrollEl = scrollEl.parentElement as HTMLElement
+    }
+    // Scroll the modal so there's room below the trigger for the calendar
+    if (scrollEl && scrollEl !== document.body) {
+      const r0 = btnRef.current.getBoundingClientRect()
+      const needed = r0.bottom + popH + 16
+      if (needed > window.innerHeight) {
+        scrollEl.scrollTop += needed - window.innerHeight
+      }
+    }
+    // Now measure final position after scroll
+    const r = btnRef.current.getBoundingClientRect()
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - popW - 8))
+    const top = r.bottom + 4
+    setPos({ top, left, above: false })
+    setPFrom(from || '')
+    setPTo(to && to !== from ? to : '')
+    setHovered('')
+    const anchor = from || today
+    const d = new Date(anchor + 'T12:00:00')
+    setViewYear(d.getFullYear()); setViewMonth(d.getMonth())
+    setOpen(true)
+  }
+
+  function togglePicker() {
+    open ? setOpen(false) : openPicker()
+  }
+
+  function prevMonth() {
+    if (viewMonth === 0) { setViewMonth(11); setViewYear(y => y - 1) } else setViewMonth(m => m - 1)
+  }
+  function nextMonth() {
+    if (viewMonth === 11) { setViewMonth(0); setViewYear(y => y + 1) } else setViewMonth(m => m + 1)
+  }
+
+  // Monday-first grid for a given month
+  function monthCells(year: number, month: number): string[] {
+    const first = new Date(year, month, 1)
+    const dow = first.getDay()              // 0=Sun … 6=Sat
+    const offset = dow === 0 ? 6 : dow - 1 // spaces before Monday=0
+    const start = new Date(year, month, 1 - offset)
+    return Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(start.getTime())
+      d.setDate(start.getDate() + i)
+      return d.toISOString().slice(0, 10)
+    })
+  }
+
+  const rightYear  = viewMonth === 11 ? viewYear + 1 : viewYear
+  const rightMonth = viewMonth === 11 ? 0 : viewMonth + 1
+  const leftCells  = monthCells(viewYear, viewMonth)
+  const rightCells = monthCells(rightYear, rightMonth)
+
+  // Effective end for range highlight (hover preview while picking end)
+  const effectiveTo = pFrom && !pTo && hovered && hovered >= pFrom ? hovered : pTo
+
+  function handleCell(cell: string) {
+    if (!pFrom || pTo) {
+      // First click — set start, clear end
+      setPFrom(cell); setPTo(''); setHovered('')
+    } else {
+      // Second click
+      if (cell === pFrom) {
+        // Same date clicked again → single day, apply immediately
+        onChange(pFrom, pFrom)
+        setOpen(false)
+      } else if (cell < pFrom) {
+        // Before start → restart selection
+        setPFrom(cell); setPTo(''); setHovered('')
+      } else {
+        // Valid end date — set it (user still clicks Apply to confirm)
+        setPTo(cell)
+      }
+    }
+  }
+
+  function apply() {
+    onChange(pFrom, pTo || pFrom)
+    setOpen(false)
+  }
+
+  const fmtShort = (s: string) => {
+    const d = new Date(s + 'T12:00:00')
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+  }
+  const fmtLong = (s: string) => {
+    const d = new Date(s + 'T12:00:00')
+    return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+  }
+
+  const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su']
+
+  function renderMonth(cells: string[], year: number, month: number) {
+    return (
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', marginBottom: 2 }}>
+          {DOW_LABELS.map(d => (
+            <div key={d} style={{ textAlign: 'center', fontSize: 10, fontWeight: 600, color: '#9CA3AF', padding: '2px 0' }}>{d}</div>
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+          {cells.map(cell => {
+            const cd     = new Date(cell + 'T12:00:00')
+            const inMon  = cd.getMonth() === month
+            const isToday = cell === today
+            const isStart = cell === pFrom
+            const isEnd   = !!effectiveTo && cell === effectiveTo && cell !== pFrom
+            const inRange = !!(pFrom && effectiveTo && cell > pFrom && cell < effectiveTo)
+            const dow = cd.getDay() // 0=Sun,1=Mon…6=Sat
+            // For range bg: break at Mon (start of display week) and Sun (end)
+            const isRowStart = dow === 1 || cd.getDate() === 1
+            const isRowEnd   = dow === 0 || cd.getDate() === new Date(year, month + 1, 0).getDate()
+
+            let rowBg = 'transparent', rowBr = '0'
+            let dotBg = 'transparent', dotFg = inMon ? '#374151' : '#C9CDD4', dotBr = '50%', fw = isToday ? 700 : 400
+
+            if (isStart || isEnd) {
+              rowBg = '#EEF2FF'
+              rowBr = isStart ? (isEnd ? '50%' : '50% 0 0 50%') : '0 50% 50% 0'
+              if (!effectiveTo || isStart === isEnd) rowBr = '50%'
+              dotBg = '#6C63FF'; dotFg = '#fff'; dotBr = '50%'; fw = 700
+            } else if (inRange) {
+              rowBg = '#EEF2FF'; dotFg = '#4338CA'
+              rowBr = isRowStart ? '50% 0 0 50%' : isRowEnd ? '0 50% 50% 0' : '0'
+            }
+
+            return (
+              <div key={cell} style={{ background: rowBg, borderRadius: rowBr, display: 'flex', justifyContent: 'center', alignItems: 'center', height: 32 }}
+                onClick={() => handleCell(cell)}
+                onMouseEnter={() => { if (pFrom && !pTo) setHovered(cell) }}
+                onMouseLeave={() => setHovered('')}
+              >
+                <div style={{
+                  width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 12, fontWeight: fw,
+                  color: dotFg, background: dotBg, borderRadius: '50%',
+                  opacity: inMon ? 1 : 0.3, cursor: 'pointer', flexShrink: 0,
+                }}>
+                  {cd.getDate()}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+
+  const label = from
+    ? (to && to !== from
+        ? `${fmtShort(from)} – ${fmtShort(to)}`
+        : fmtShort(from))
+    : null
+
+  return (
+    <div style={{ flex: compact ? undefined : 1, width: compact ? '100%' : undefined }}>
+      {/* Trigger */}
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={togglePicker}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', gap: 8,
+          padding: '7px 10px', border: '1.5px solid', borderRadius: 8,
+          background: '#fff', cursor: 'pointer', textAlign: 'left', boxSizing: 'border-box',
+          borderColor: open ? '#6C63FF' : '#E5E7EB',
+        }}
+      >
+        <CalendarDays size={13} color={open ? '#6C63FF' : '#9CA3AF'} style={{ flexShrink: 0 }} />
+        <span style={{ flex: 1, fontSize: 13, color: label ? '#111827' : '#9CA3AF', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {label ?? 'Select date(s)…'}
+        </span>
+        {from && (
+          <span role="button" onClick={e => { e.stopPropagation(); onChange('', ''); setOpen(false) }}
+            style={{ display: 'flex', color: '#D1D5DB', cursor: 'pointer', flexShrink: 0 }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#EF4444' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#D1D5DB' }}
+          ><X size={12} /></span>
+        )}
+      </button>
+
+      {/* Dropdown — portal into body, position: fixed, calculated coords */}
+      {open && createPortal(
+        <div ref={popRef} style={{
+          position: 'fixed', top: pos.top, left: pos.left,
+          zIndex: 99999, background: '#fff',
+          border: '1px solid #E5E7EB', borderRadius: 14,
+          boxShadow: '0 12px 40px rgba(0,0,0,0.18)',
+          padding: '16px', width: 560, userSelect: 'none',
+        }}>
+          {/* Hint */}
+          <div style={{ fontSize: 11, color: '#6C63FF', fontWeight: 600, background: '#F5F3FF', borderRadius: 6, padding: '3px 10px', marginBottom: 12, textAlign: 'center' }}>
+            {!pFrom ? 'Click a start date' : !pTo ? 'Click end date for a range, or same date for a single day' : 'Range selected — click Apply'}
+          </div>
+
+          {/* Month nav */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+            <button onClick={prevMonth} style={calNavBtn}><ChevronLeft size={14} /></button>
+            <div style={{ flex: 1, display: 'flex', justifyContent: 'space-around' }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{MONTH_NAMES[viewMonth]} {viewYear}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: '#111827' }}>{MONTH_NAMES[rightMonth]} {rightYear}</span>
+            </div>
+            <button onClick={nextMonth} style={calNavBtn}><ChevronRight size={14} /></button>
+          </div>
+
+          {/* Two-month grid */}
+          <div style={{ display: 'flex', gap: 12 }}>
+            {renderMonth(leftCells, viewYear, viewMonth)}
+            <div style={{ width: 1, background: '#F3F4F6', flexShrink: 0 }} />
+            {renderMonth(rightCells, rightYear, rightMonth)}
+          </div>
+
+          {/* Footer — manual inputs + actions */}
+          <div style={{ marginTop: 12, borderTop: '1px solid #F3F4F6', paddingTop: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <input type="date" value={pFrom}
+                onChange={e => { setPFrom(e.target.value); if (pTo && e.target.value > pTo) setPTo('') }}
+                style={{ flex: 1, padding: '5px 8px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#F9FAFB' }}
+              />
+              <span style={{ color: '#9CA3AF', fontSize: 13, flexShrink: 0 }}>→</span>
+              <input type="date" value={pTo} min={pFrom || undefined}
+                onChange={e => setPTo(e.target.value)}
+                style={{ flex: 1, padding: '5px 8px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 12, fontFamily: 'inherit', outline: 'none', background: '#F9FAFB' }}
+              />
+            </div>
+            <button onClick={() => setOpen(false)} style={{ padding: '6px 12px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', fontSize: 12.5, color: '#374151', cursor: 'pointer', flexShrink: 0 }}>Cancel</button>
+            <button onClick={apply} disabled={!pFrom}
+              style={{ padding: '6px 14px', border: 'none', borderRadius: 8, fontSize: 12.5, fontWeight: 600, color: '#fff', cursor: pFrom ? 'pointer' : 'default', background: pFrom ? '#059669' : '#D1D5DB', flexShrink: 0 }}>
+              Apply
+            </button>
+          </div>
+        </div>,
+        document.body
+      )}
+    </div>
+  )
+}
+
+function fmtHours(h: number): string {
+  const hrs = Math.floor(h); const mins = Math.round((h - hrs) * 60)
+  return mins === 0 ? `${hrs}h` : `${hrs}h ${mins}m`
+}
+
+function AdjustScheduleModal({ allEmployees, tz, onSave, onClose }: {
+  allEmployees: Employee[]
+  tz: TZKey
+  onSave: (adj: ScheduleAdjustment) => void
+  onClose: () => void
+}) {
+  const [empSearch,      setEmpSearch]      = useState('')
+  const [selectedEmpId,  setSelectedEmpId]  = useState<string | null>(null)
+  const [empDropOpen,    setEmpDropOpen]    = useState(false)
+  const [origFrom,       setOrigFrom]       = useState('')
+  const [origTo,         setOrigTo]         = useState('')
+  const [slots,          setSlots]          = useState<AdjustmentSlot[]>([{ dateFrom: '', dateTo: '', start: '09:00', end: '17:00' }])
+  const [reason,         setReason]         = useState('')
+  const [submitted,      setSubmitted]      = useState(false)
+  const empRef = useRef<HTMLDivElement>(null)
+  const backdropRef = useRef<HTMLDivElement>(null)
+
+  const emp = allEmployees.find(e => e.id === selectedEmpId) ?? null
+
+  useEffect(() => {
+    function h(e: MouseEvent) {
+      if (empRef.current && !empRef.current.contains(e.target as Node)) setEmpDropOpen(false)
+    }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const filteredEmps = empSearch
+    ? allEmployees.filter(e => e.name.toLowerCase().includes(empSearch.toLowerCase()) || e.role.toLowerCase().includes(empSearch.toLowerCase()))
+    : allEmployees
+
+  function selectEmp(id: string) {
+    setSelectedEmpId(id)
+    setEmpDropOpen(false)
+    setEmpSearch('')
+    // Pre-fill replacement start/end from employee's current schedule
+    const e = allEmployees.find(x => x.id === id)
+    if (e?.scheduleType === 'fixed') {
+      const today = new Date().getDay() as DayOfWeek
+      const sched = getScheduleForDay(e, today)
+      if (sched) {
+        const start = hhmm(dispH(sched.startUTC, tz))
+        const end   = hhmm(dispH(sched.endUTC, tz))
+        setSlots([{ dateFrom: '', dateTo: '', start, end }])
+      }
+    }
+  }
+
+  // Expand from–to range into individual date strings
+  function expandDateRange(from: string, to: string): string[] {
+    if (!from) return []
+    const end = to && to >= from ? to : from
+    const dates: string[] = []
+    const cur = new Date(from + 'T12:00:00')
+    const last = new Date(end + 'T12:00:00')
+    while (cur <= last) {
+      dates.push(cur.toISOString().slice(0, 10))
+      cur.setDate(cur.getDate() + 1)
+    }
+    return dates
+  }
+
+  const expandedOrigDates = expandDateRange(origFrom, origTo || origFrom)
+
+  // Range day count label
+  function rangeDayLabel(): string | null {
+    if (!origFrom) return null
+    const n = expandedOrigDates.length
+    if (n === 1) return null
+    return `${n} days`
+  }
+
+  // Orig hours for context (shows pattern from the first day)
+  function getOrigHoursLabel(): string | null {
+    if (!emp || !origFrom || emp.scheduleType !== 'fixed') return null
+    const d = new Date(origFrom + 'T12:00:00')
+    const s = getScheduleForDay(emp, d.getDay() as DayOfWeek)
+    if (!s) return null
+    return `${fmt(s.startUTC, tz)} – ${fmt(s.endUTC, tz)}`
+  }
+
+  function origHoursForDates(): number {
+    if (!emp || emp.scheduleType !== 'fixed') return 0
+    return expandedOrigDates.reduce((sum, dateStr) => {
+      const d = new Date(dateStr + 'T12:00:00')
+      const s = getScheduleForDay(emp, d.getDay() as DayOfWeek)
+      if (!s) return sum
+      return sum + ((s.endUTC - s.startUTC + 24) % 24)
+    }, 0)
+  }
+
+  const kindLabel  = adjustmentKindLabel(expandedOrigDates, slots.filter(s => s.dateFrom && s.start && s.end))
+  const origTotal  = origHoursForDates()
+  const replTotal  = totalHours(slots.filter(s => s.dateFrom && s.start && s.end))
+  const hoursDiff  = replTotal - origTotal
+  const hoursMatch = Math.abs(hoursDiff) < 0.05
+
+  const canSubmit = !!selectedEmpId &&
+    !!origFrom &&
+    slots.every(s => s.dateFrom && s.start && s.end) &&
+    slots.length > 0 &&
+    reason.trim().length > 0
+
+  function handleSubmit() {
+    if (!canSubmit || !selectedEmpId) return
+    onSave({
+      id: `adj-${Date.now()}`,
+      employeeId: selectedEmpId,
+      originalDates: expandedOrigDates,
+      replacementSlots: slots.filter(s => s.dateFrom && s.start && s.end),
+      reason: reason.trim(),
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    })
+    setSubmitted(true)
+    setTimeout(() => { setSubmitted(false); onClose() }, 1200)
+  }
+
+  function updateSlot(i: number, field: keyof AdjustmentSlot, val: string) {
+    setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, [field]: val } : s))
+  }
+
+  function addSlot() {
+    const last = slots[slots.length - 1]
+    setSlots(prev => [...prev, { dateFrom: '', dateTo: '', start: last?.start ?? '09:00', end: last?.end ?? '17:00' }])
+  }
+
+  function removeSlot(i: number) {
+    if (slots.length === 1) return
+    setSlots(prev => prev.filter((_, idx) => idx !== i))
+  }
+
+
+  return (
+    <div
+      ref={backdropRef}
+      onClick={e => { if (e.target === backdropRef.current) onClose() }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 0' }}
+    >
+      <div style={{ background: '#fff', borderRadius: 14, width: 520, maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.18)', animation: 'fadeScaleIn 0.18s ease' }}>
+
+        {/* Header */}
+        <div style={{ padding: '20px 24px 16px', borderBottom: '1px solid #F3F4F6', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, background: '#F5F3FF', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <ArrowRightLeft size={17} color="#6C63FF" />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>Adjust Schedule</div>
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 1 }}>Log a one-time change to a person's schedule</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#9CA3AF', padding: 4, display: 'flex' }}>
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Scrollable body */}
+        <div style={{ overflowY: 'auto', padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 20, flex: 1 }}>
+
+          {/* Employee picker */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Person</div>
+            <div ref={empRef} style={{ position: 'relative' }}>
+              <button
+                onClick={() => setEmpDropOpen(o => !o)}
+                style={{
+                  width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                  padding: '8px 12px', border: '1.5px solid', borderRadius: 8, cursor: 'pointer', background: '#fff',
+                  borderColor: empDropOpen ? '#6C63FF' : '#E5E7EB',
+                  textAlign: 'left',
+                }}
+              >
+                {emp ? (
+                  <>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: emp.bg, color: emp.fg, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{emp.initials}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: '#111827' }}>{emp.name}</div>
+                      <div style={{ fontSize: 11, color: '#9CA3AF' }}>{emp.role}</div>
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 13, color: '#9CA3AF', flex: 1 }}>Select a person…</span>
+                )}
+                <ChevronDown size={13} color="#9CA3AF" style={{ transform: empDropOpen ? 'rotate(180deg)' : undefined, transition: 'transform 0.15s' }} />
+              </button>
+
+              {empDropOpen && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, right: 0, zIndex: 600, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+                  <div style={{ padding: '8px 10px', borderBottom: '1px solid #F3F4F6', position: 'relative' }}>
+                    <Search size={12} color="#9CA3AF" style={{ position: 'absolute', left: 18, top: '50%', transform: 'translateY(-50%)' }} />
+                    <input autoFocus value={empSearch} onChange={e => setEmpSearch(e.target.value)} placeholder="Search people…"
+                      style={{ width: '100%', padding: '5px 8px 5px 26px', border: '1px solid #E5E7EB', borderRadius: 6, fontSize: 12.5, outline: 'none', boxSizing: 'border-box' }} />
+                  </div>
+                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                    {filteredEmps.map(e => (
+                      <div key={e.id} onClick={() => selectEmp(e.id)}
+                        style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '8px 12px', cursor: 'pointer', background: selectedEmpId === e.id ? '#F5F3FF' : undefined }}
+                        onMouseEnter={ev => { if (selectedEmpId !== e.id) ev.currentTarget.style.background = '#F9FAFB' }}
+                        onMouseLeave={ev => { ev.currentTarget.style.background = selectedEmpId === e.id ? '#F5F3FF' : '' }}
+                      >
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', background: e.bg, color: e.fg, fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>{e.initials}</div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12.5, fontWeight: 500, color: '#111827' }}>{e.name}</div>
+                          <div style={{ fontSize: 11, color: '#9CA3AF' }}>{e.role}</div>
+                        </div>
+                        {selectedEmpId === e.id && <CheckCircle2 size={14} color="#6C63FF" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Date range being replaced */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Date(s) being replaced
+              </div>
+              {rangeDayLabel() && (
+                <span style={{ fontSize: 11, fontWeight: 600, color: '#6C63FF', background: '#F5F3FF', padding: '2px 7px', borderRadius: 5 }}>
+                  {rangeDayLabel()}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <DateRangePicker
+                from={origFrom} to={origTo}
+                onChange={(f, t) => { setOrigFrom(f); setOrigTo(t) }}
+                placeholder="Select date(s)…"
+              />
+              {origFrom && !origTo && getOrigHoursLabel() && (
+                <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap', background: '#F3F4F6', padding: '3px 7px', borderRadius: 5, flexShrink: 0 }}>
+                  {getOrigHoursLabel()}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Divider with label */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ flex: 1, height: 1, background: '#F3F4F6' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <ArrowRightLeft size={11} color="#9CA3AF" />
+              <span style={{ fontSize: 11, color: '#9CA3AF', whiteSpace: 'nowrap' }}>
+                {kindLabel ?? 'will be replaced by'}
+              </span>
+            </div>
+            <div style={{ flex: 1, height: 1, background: '#F3F4F6' }} />
+          </div>
+
+          {/* Replacement slots */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em' }}>New schedule</div>
+              {slots.length > 0 && origTotal > 0 && (
+                <span style={{
+                  fontSize: 11, fontWeight: 600,
+                  color: hoursMatch ? '#059669' : '#D97706',
+                  background: hoursMatch ? '#D1FAE5' : '#FEF3C7',
+                  padding: '2px 7px', borderRadius: 5,
+                }}>
+                  {fmtHours(replTotal)} {origTotal > 0 && !hoursMatch ? `(orig. ${fmtHours(origTotal)}, ${hoursDiff > 0 ? '+' : ''}${fmtHours(Math.abs(hoursDiff))})` : ''}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {slots.map((slot, i) => {
+                const dur = slot.start && slot.end ? durationLabel(slot.start, slot.end) : ''
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <div style={{ flex: '0 0 160px' }}>
+                        <DateRangePicker
+                          from={slot.dateFrom} to={slot.dateTo}
+                          compact
+                          onChange={(f, t) => setSlots(prev => prev.map((s, idx) => idx === i ? { ...s, dateFrom: f, dateTo: t } : s))}
+                        />
+                      </div>
+                      <input type="time" value={slot.start} onChange={e => updateSlot(i, 'start', e.target.value)}
+                        style={{ ...inputStyle, flex: 1, fontSize: 12.5 }} />
+                      <span style={{ color: '#D1D5DB', fontSize: 11, flexShrink: 0 }}>→</span>
+                      <input type="time" value={slot.end} onChange={e => updateSlot(i, 'end', e.target.value)}
+                        style={{ ...inputStyle, flex: 1, fontSize: 12.5 }} />
+                      <span style={{ fontSize: 10.5, color: dur ? '#6B7280' : 'transparent', fontWeight: 600, background: dur ? '#F3F4F6' : 'transparent', padding: '2px 6px', borderRadius: 5, flexShrink: 0, minWidth: 28, textAlign: 'center', userSelect: 'none' }}>
+                        {dur || '··'}
+                      </span>
+                    </div>
+                    {/* Trash — outside card, always reserves space to keep card width stable */}
+                    <button
+                      onClick={() => removeSlot(i)}
+                      style={{ background: 'none', border: 'none', cursor: slots.length > 1 ? 'pointer' : 'default', color: '#D1D5DB', padding: 4, display: 'flex', flexShrink: 0, visibility: slots.length > 1 ? 'visible' : 'hidden' }}
+                      onMouseEnter={e => { if (slots.length > 1) e.currentTarget.style.color = '#EF4444' }}
+                      onMouseLeave={e => { e.currentTarget.style.color = '#D1D5DB' }}
+                    >
+                      <Trash size={13} />
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+
+            <button onClick={addSlot}
+              style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 5, width: '100%', padding: '7px 12px', border: '1.5px dashed #D1D5DB', borderRadius: 8, background: 'none', cursor: 'pointer', fontSize: 12, color: '#9CA3AF', justifyContent: 'center' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor = '#6C63FF'; e.currentTarget.style.color = '#6C63FF' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor = '#D1D5DB'; e.currentTarget.style.color = '#9CA3AF' }}
+            >
+              <Plus size={12} /> Add another day
+            </button>
+          </div>
+
+          {/* Reason */}
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: '#9CA3AF', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Reason</div>
+            <textarea
+              value={reason} onChange={e => setReason(e.target.value)}
+              placeholder="e.g. Taking Monday off for a family event, will work Saturday instead"
+              rows={3} style={{ ...inputStyle, resize: 'none', fontFamily: 'inherit', fontSize: 13 }}
+            />
+          </div>
+
+          {/* Hours mismatch warning */}
+          {origTotal > 0 && !hoursMatch && reason.trim() && (
+            <div style={{ display: 'flex', gap: 8, padding: '9px 12px', background: '#FFFBEB', border: '1px solid #FDE68A', borderRadius: 8 }}>
+              <Clock size={13} color="#F59E0B" style={{ flexShrink: 0, marginTop: 1 }} />
+              <span style={{ fontSize: 12, color: '#92400E', lineHeight: 1.45 }}>
+                The replacement schedule is <strong>{fmtHours(Math.abs(hoursDiff))} {hoursDiff > 0 ? 'more' : 'less'}</strong> than the original. This will affect total hours for this period.
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: '14px 24px 20px', borderTop: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onClose} style={{ padding: '8px 18px', border: '1px solid #E5E7EB', borderRadius: 8, background: '#fff', cursor: 'pointer', fontSize: 13, color: '#6B7280', fontWeight: 500 }}>
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit || submitted}
+            style={{
+              padding: '8px 20px', border: 'none', borderRadius: 8,
+              fontSize: 13, fontWeight: 700, cursor: canSubmit && !submitted ? 'pointer' : 'default',
+              background: submitted ? '#059669' : '#6C63FF', color: '#fff',
+              display: 'flex', alignItems: 'center', gap: 6,
+              opacity: !canSubmit ? 0.5 : 1, transition: 'background 0.2s',
+            }}
+          >
+            {submitted ? <><CheckCircle2 size={14} /> Submitted!</> : 'Submit Adjustment'}
+          </button>
+        </div>
+      </div>
+      <style>{`@keyframes fadeScaleIn { from { opacity: 0; transform: scale(0.96) } to { opacity: 1; transform: scale(1) } }`}</style>
+    </div>
+  )
+}
+
 // ── Schedule Modal (create / edit) ────────────────────────────────────────────
 
 interface ModalState {
@@ -1358,6 +2099,8 @@ function ScheduleModal({ emp, allEmployees, tz, onSave, onClose, onAddMove }: {
     }))
   )
   const [note,         setNote]         = useState(emp?.note ?? '')
+  const [weeklyLimit,  setWeeklyLimit]  = useState<string>(emp?.scheduleLimit?.weeklyHours != null ? String(emp.scheduleLimit.weeklyHours) : '')
+  const [dailyLimit,   setDailyLimit]   = useState<string>(emp?.scheduleLimit?.dailyHours  != null ? String(emp.scheduleLimit.dailyHours)  : '')
   const [saved,        setSaved]        = useState(false)
 
   const target = isNew
@@ -1402,6 +2145,10 @@ function ScheduleModal({ emp, allEmployees, tz, onSave, onClose, onAddMove }: {
           }))
         : [],
       note: note.trim() || undefined,
+      scheduleLimit: (weeklyLimit || dailyLimit) ? {
+        weeklyHours: weeklyLimit ? Number(weeklyLimit) : undefined,
+        dailyHours:  dailyLimit  ? Number(dailyLimit)  : undefined,
+      } : undefined,
     }
     onSave(updated)
     setSaved(true)
@@ -1555,6 +2302,51 @@ function ScheduleModal({ emp, allEmployees, tz, onSave, onClose, onAddMove }: {
             </Field>
           )}
 
+          {/* Schedule limits */}
+          <Field label="Hour limits (optional)">
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginBottom: 4 }}>Max per week</div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={168}
+                    placeholder="e.g. 40"
+                    value={weeklyLimit}
+                    onChange={e => setWeeklyLimit(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: 32 }}
+                  />
+                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11.5, color: '#9CA3AF', pointerEvents: 'none' }}>hrs</span>
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 11, color: '#9CA3AF', fontWeight: 600, marginBottom: 4 }}>Max per day</div>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type="number"
+                    min={1}
+                    max={24}
+                    placeholder="e.g. 8"
+                    value={dailyLimit}
+                    onChange={e => setDailyLimit(e.target.value)}
+                    style={{ ...inputStyle, paddingRight: 32 }}
+                  />
+                  <span style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 11.5, color: '#9CA3AF', pointerEvents: 'none' }}>hrs</span>
+                </div>
+              </div>
+            </div>
+            {(weeklyLimit || dailyLimit) && (
+              <div style={{ marginTop: 6, fontSize: 11.5, color: '#6B7280', background: '#F9FAFB', border: '1px solid #F3F4F6', borderRadius: 6, padding: '5px 10px' }}>
+                {weeklyLimit && dailyLimit
+                  ? `Limited to ${weeklyLimit}h/week and ${dailyLimit}h/day`
+                  : weeklyLimit
+                    ? `Limited to ${weeklyLimit}h/week`
+                    : `Limited to ${dailyLimit}h/day`}
+              </div>
+            )}
+          </Field>
+
           {/* Note */}
           <Field label="Note (optional)">
             <textarea
@@ -1626,8 +2418,10 @@ export function SchedulesPage() {
   const [dayOffset,   setDayOffset]   = useState(0)
   const [page,        setPage]        = useState(0)
   const [employees,   setEmployees]   = useState<Employee[]>(EMPLOYEES)
-  const [modal,       setModal]       = useState<ModalState>({ emp: null, open: false })
-  const [detailEmp,   setDetailEmp]   = useState<Employee | null>(null)
+  const [modal,        setModal]       = useState<ModalState>({ emp: null, open: false })
+  const [detailEmp,    setDetailEmp]  = useState<Employee | null>(null)
+  const [adjustOpen,   setAdjustOpen] = useState(false)
+  const [adjustments,  setAdjustments] = useState<ScheduleAdjustment[]>([])
 
   const localTzName = Intl.DateTimeFormat().resolvedOptions().timeZone
 
@@ -1781,6 +2575,16 @@ export function SchedulesPage() {
             </select>
           </div>
 
+          {/* Adjust schedule */}
+          <button
+            onClick={() => setAdjustOpen(true)}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 14px', height: 34, border: '1.5px solid #A5B4FC', borderRadius: 8, background: '#F5F3FF', color: '#4338CA', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#EEF2FF'; e.currentTarget.style.borderColor = '#6C63FF' }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#F5F3FF'; e.currentTarget.style.borderColor = '#A5B4FC' }}
+          >
+            <ArrowRightLeft size={14} /> Adjust Schedule
+          </button>
+
           {/* Add schedule */}
           <button
             onClick={() => setModal({ emp: null, open: true })}
@@ -1898,6 +2702,16 @@ export function SchedulesPage() {
           onSave={handleSave}
           onClose={() => setModal({ emp: null, open: false })}
           onAddMove={handleAddShiftMove}
+        />
+      )}
+
+      {/* Adjust schedule modal */}
+      {adjustOpen && (
+        <AdjustScheduleModal
+          allEmployees={employees}
+          tz={tz}
+          onSave={adj => { setAdjustments(prev => [...prev, adj]) }}
+          onClose={() => setAdjustOpen(false)}
         />
       )}
     </div>
