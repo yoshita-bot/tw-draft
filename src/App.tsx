@@ -27,11 +27,11 @@ import { DailyTotalPage } from './pages/DailyTotalPage'
 import { TimeEditsPage } from './pages/TimeEditsPage'
 import { WorkSessionsPage } from './pages/WorkSessionsPage'
 import { DeletedScreenshotsPage } from './pages/DeletedScreenshotsPage'
+import OrganisationPage from './pages/OrganisationPage'
 import { ROUTES } from './lib/routes'
 
 const STUB_PATHS = [
   ROUTES.reports,
-  ROUTES.settings,
   ROUTES.settingsEmployees,
 ] as const
 
@@ -88,6 +88,7 @@ export default function App() {
             <Route path={ROUTES.pastPayments} element={<ErrorBoundary><PastPaymentsPage /></ErrorBoundary>} />
 
             {/* Settings */}
+            <Route path={ROUTES.settings}              element={<ErrorBoundary><OrganisationPage /></ErrorBoundary>} />
             <Route path={ROUTES.settingsSecurity}      element={<ErrorBoundary><SecurityPage /></ErrorBoundary>} />
             <Route path={ROUTES.settingsTrackingRules} element={<ErrorBoundary><TrackingRulesPage /></ErrorBoundary>} />
 

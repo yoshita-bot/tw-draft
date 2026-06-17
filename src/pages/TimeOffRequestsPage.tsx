@@ -369,20 +369,52 @@ function InfoCard({ label, value, accent }: { label: string; value: React.ReactN
 //  CREATE POLICY MODAL
 // ─────────────────────────────────────────────────────────────
 
+const PROJECTS = [
+  { id: 'proj1', name: 'Paradigm Redesign',   clientId: 'c1' },
+  { id: 'proj2', name: 'Cosmo Mobile App',    clientId: 'c2' },
+  { id: 'proj3', name: 'Internal Operations', clientId: null },
+  { id: 'proj4', name: 'Onboarding Platform', clientId: null },
+]
+
+const CLIENTS = [
+  { id: 'c1', name: 'Paradigm Corp' },
+  { id: 'c2', name: 'Cosmo LLC' },
+]
+
+// which workers belong to which projects / clients (for member filter)
+const WORKER_META: Record<string, { projectIds: string[]; clientId: string | null }> = {
+  w1: { projectIds: ['proj1'], clientId: 'c1' },
+  w2: { projectIds: ['proj1'], clientId: 'c1' },
+  w3: { projectIds: ['proj1'], clientId: 'c1' },
+  w4: { projectIds: ['proj2'], clientId: 'c2' },
+  w5: { projectIds: ['proj2'], clientId: 'c2' },
+  w6: { projectIds: ['proj3', 'proj4'], clientId: null },
+}
+
 function CreatePolicyModal({ onClose, onSubmit }: {
   onClose: () => void
   onSubmit: (p: Policy) => void
 }) {
-  const [name, setName]               = useState('')
-  const [type, setType]               = useState<'internal' | 'client-paid'>('internal')
-  const [client, setClient]           = useState('')
-  const [maxBalance, setMaxBalance]   = useState('40')
-  const [accrualRate, setAccrualRate] = useState('0')
-  const [rolloverCap, setRolloverCap] = useState('')
-  const [allowNeg, setAllowNeg]       = useState(false)
-  const [memberIds, setMemberIds]     = useState<string[]>([])
+  const [name, setName]                   = useState('')
+  const [nameError, setNameError]         = useState(false)
+  const [type, setType]                   = useState<'internal' | 'client-paid'>('internal')
+  const [client, setClient]               = useState('')
+  const [startingHours, setStartingHours] = useState('40')
+  const [accrualHours, setAccrualHours]   = useState('0')
+  const [accrualRate, setAccrualRate]     = useState('None')
+  const [rolloverAllowed, setRolloverAllowed] = useState(false)
+  const [allowNeg, setAllowNeg]           = useState(false)
+  const [memberIds, setMemberIds]         = useState<string[]>([])
+  const [projectId, setProjectId]         = useState('')
+  const [billable, setBillable]           = useState('')
+  const [approvalRequired, setApprovalRequired] = useState(false)
+  const [memberSearch, setMemberSearch]         = useState('')
+  const [memberFilterClient, setMemberFilterClient] = useState('')
+  const [memberFilterProject, setMemberFilterProject] = useState('')
+  const [memberDropOpen, setMemberDropOpen]     = useState(false)
 
   const inp: React.CSSProperties = { width: '100%', padding: '8px 11px', border: '1px solid #E5E7EB', borderRadius: 7, fontSize: 13, fontFamily: 'inherit', color: '#111827', outline: 'none', background: '#fff', boxSizing: 'border-box' }
+  const inpError: React.CSSProperties = { ...inp, border: '1px solid #EF4444' }
   const lbl: React.CSSProperties = { display: 'block', fontSize: 11, fontWeight: 600, color: '#6B7280', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: 5 }
 
   const valid = name.trim().length > 0 && (type === 'internal' || client.trim().length > 0) && memberIds.length > 0
@@ -391,29 +423,38 @@ function CreatePolicyModal({ onClose, onSubmit }: {
     setMemberIds(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id])
   }
 
+  const filteredWorkers = WORKERS.filter(w => {
+    const meta = WORKER_META[w.id]
+    if (memberSearch && !w.name.toLowerCase().includes(memberSearch.toLowerCase())) return false
+    if (memberFilterClient && meta.clientId !== memberFilterClient) return false
+    if (memberFilterProject && !meta.projectIds.includes(memberFilterProject)) return false
+    return true
+  })
+
   function submit() {
+    if (!name.trim()) { setNameError(true); return }
     const policy: Policy = {
       id: `pol-${Date.now()}`,
       name: name.trim(),
       type,
       client: type === 'client-paid' ? client.trim() : undefined,
       color: '#6B7280',
-      accrualRate: parseFloat(accrualRate) || 0,
-      maxBalance: parseInt(maxBalance) || 0,
+      accrualRate: parseFloat(accrualHours) || 0,
+      maxBalance: parseInt(startingHours) || 0,
       allowNegative: allowNeg,
-      rolloverCap: rolloverCap.trim() === '' || rolloverCap.trim().toLowerCase() === 'unlimited' ? null : parseInt(rolloverCap) || null,
+      rolloverCap: rolloverAllowed ? null : 0,
       members: memberIds,
     }
     onSubmit(policy)
     onClose()
   }
 
-  const hoursVal = parseInt(maxBalance) || 0
+  const hoursVal = parseInt(startingHours) || 0
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}
       onClick={e => e.target === e.currentTarget && onClose()}>
-      <div style={{ background: '#fff', borderRadius: 14, width: 540, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+      <div style={{ background: '#fff', borderRadius: 14, width: 560, maxHeight: '92vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
 
         {/* Header */}
         <div style={{ padding: '18px 24px 14px', borderBottom: '1px solid #F0F0F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -426,10 +467,17 @@ function CreatePolicyModal({ onClose, onSubmit }: {
 
         <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-          {/* Name */}
+          {/* Name — mandatory */}
           <div>
-            <label style={lbl}>Policy name</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Annual Leave" style={inp} />
+            <label style={lbl}>Policy name <span style={{ color: '#EF4444' }}>*</span></label>
+            <input
+              value={name}
+              onChange={e => { setName(e.target.value); if (e.target.value.trim()) setNameError(false) }}
+              onBlur={() => { if (!name.trim()) setNameError(true) }}
+              placeholder="e.g. Annual Leave"
+              style={nameError ? inpError : inp}
+            />
+            {nameError && <div style={{ fontSize: 11.5, color: '#EF4444', marginTop: 4 }}>Policy name is required</div>}
           </div>
 
           {/* Type */}
@@ -452,62 +500,230 @@ function CreatePolicyModal({ onClose, onSubmit }: {
             </div>
           )}
 
-          {/* Allocation + Accrual */}
+          {/* Project + Billable */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={lbl}>Total allocation (hours)</label>
-              <input type="number" min="0" value={maxBalance} onChange={e => setMaxBalance(e.target.value)} placeholder="40" style={inp} />
+              <label style={lbl}>Project</label>
+              <select value={projectId} onChange={e => setProjectId(e.target.value)} style={inp}>
+                <option value="">— select project —</option>
+                {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Billing type</label>
+              <select value={billable} onChange={e => setBillable(e.target.value)} style={inp}>
+                <option value="">— select —</option>
+                <option value="billable">Billable</option>
+                <option value="non-billable">Non-billable</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Starting hours + Accrual hours */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div>
+              <label style={lbl}>Starting hours</label>
+              <input type="number" min="0" value={startingHours} onChange={e => setStartingHours(e.target.value)} placeholder="40" style={inp} />
               {hoursVal > 0 && <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>{hoursVal / 8} day{hoursVal / 8 !== 1 ? 's' : ''}</div>}
             </div>
             <div>
-              <label style={lbl}>Accrual rate (h/month)</label>
-              <input type="number" min="0" step="0.5" value={accrualRate} onChange={e => setAccrualRate(e.target.value)} placeholder="0 = fixed grant" style={inp} />
+              <label style={lbl}>Accrual hours</label>
+              <input type="number" min="0" step="0.5" value={accrualHours} onChange={e => setAccrualHours(e.target.value)} placeholder="0 = fixed grant" style={inp} />
               <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 4 }}>0 = granted upfront</div>
             </div>
           </div>
 
-          {/* Rollover + Negative */}
+          {/* Accrual rate */}
+          <div>
+            <label style={lbl}>Accrual rate</label>
+            <select value={accrualRate} onChange={e => setAccrualRate(e.target.value)} style={inp}>
+              <option value="None">None</option>
+              <option value="Annual">Annual</option>
+              <option value="Monthly">Monthly</option>
+              <option value="Hours worked">Hours worked</option>
+              <option value="Policy joined date">Policy joined date</option>
+            </select>
+          </div>
+
+          {/* Rollover + Approval */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
             <div>
-              <label style={lbl}>Rollover cap (hours)</label>
-              <input value={rolloverCap} onChange={e => setRolloverCap(e.target.value)} placeholder="Leave blank = unlimited" style={inp} />
+              <label style={lbl}>Rollover allowed</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                {(['Yes', 'No'] as const).map(opt => (
+                  <button key={opt} onClick={() => setRolloverAllowed(opt === 'Yes')}
+                    style={{ flex: 1, padding: '8px 10px', border: `1.5px solid ${(opt === 'Yes') === rolloverAllowed ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 7, background: (opt === 'Yes') === rolloverAllowed ? '#F5F3FF' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: (opt === 'Yes') === rolloverAllowed ? '#6C63FF' : '#6B7280', fontFamily: 'inherit' }}>
+                    {opt}
+                  </button>
+                ))}
+              </div>
+              {rolloverAllowed && (
+                <div style={{ marginTop: 7, padding: '7px 10px', background: '#FFF7ED', borderRadius: 7, border: '1px solid #FDE68A', fontSize: 11.5, color: '#B45309', display: 'flex', alignItems: 'flex-start', gap: 5 }}>
+                  <Info width={12} height={12} style={{ flexShrink: 0, marginTop: 1 }} />
+                  Allowing rollover means unused balance will carry over past Jan 1 into the new year.
+                </div>
+              )}
             </div>
             <div>
-              <label style={lbl}>Allow negative balance</label>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 6 }}>
-                <button onClick={() => setAllowNeg(v => !v)} style={{ width: 40, height: 22, borderRadius: 99, background: allowNeg ? '#059669' : '#D1D5DB', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0 }}>
-                  <div style={{ position: 'absolute', top: 3, left: allowNeg ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
-                </button>
-                <span style={{ fontSize: 13, color: '#374151' }}>{allowNeg ? 'Yes' : 'No'}</span>
+              <label style={lbl}>Approval required</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 2 }}>
+                {(['Yes', 'No'] as const).map(opt => (
+                  <button key={opt} onClick={() => setApprovalRequired(opt === 'Yes')}
+                    style={{ flex: 1, padding: '8px 10px', border: `1.5px solid ${(opt === 'Yes') === approvalRequired ? '#6C63FF' : '#E5E7EB'}`, borderRadius: 7, background: (opt === 'Yes') === approvalRequired ? '#F5F3FF' : '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: (opt === 'Yes') === approvalRequired ? '#6C63FF' : '#6B7280', fontFamily: 'inherit' }}>
+                    {opt}
+                  </button>
+                ))}
               </div>
+            </div>
+          </div>
+
+          {/* Allow negative balance */}
+          <div>
+            <label style={lbl}>Allow negative balance</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, paddingTop: 2 }}>
+              <button onClick={() => setAllowNeg(v => !v)} style={{ width: 40, height: 22, borderRadius: 99, background: allowNeg ? '#059669' : '#D1D5DB', border: 'none', cursor: 'pointer', position: 'relative', transition: 'background 0.2s', padding: 0, flexShrink: 0 }}>
+                <div style={{ position: 'absolute', top: 3, left: allowNeg ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: '#fff', transition: 'left 0.2s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+              </button>
+              <span style={{ fontSize: 13, color: '#374151' }}>{allowNeg ? 'Yes' : 'No'}</span>
             </div>
           </div>
 
           {/* Balance preview */}
           {hoursVal > 0 && (
-            <div style={{ padding: '10px 14px', background: '#F5F3FF', borderRadius: 8, fontSize: 12, color: '#6C63FF', display: 'flex', gap: 16 }}>
-              <span><strong>{hoursVal}h</strong> total · <strong>{hoursVal / 8} day{hoursVal / 8 !== 1 ? 's' : ''}</strong></span>
-              {rolloverCap ? <span>Rollover cap: <strong>{rolloverCap}h</strong></span> : <span>Rollover: <strong>Unlimited</strong></span>}
-              {parseFloat(accrualRate) > 0 && <span>Accrues <strong>{accrualRate}h/mo</strong></span>}
+            <div style={{ padding: '10px 14px', background: '#F5F3FF', borderRadius: 8, fontSize: 12, color: '#6C63FF', display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+              <span><strong>{hoursVal}h</strong> starting · <strong>{hoursVal / 8} day{hoursVal / 8 !== 1 ? 's' : ''}</strong></span>
+              <span>Rollover: <strong>{rolloverAllowed ? 'Allowed' : 'Not allowed'}</strong></span>
+              {parseFloat(accrualHours) > 0 && accrualRate !== 'None' && <span>Accrues <strong>{accrualHours}h</strong> · <strong>{accrualRate}</strong></span>}
             </div>
           )}
 
-          {/* Members */}
+          {/* Members multi-select dropdown */}
           <div>
             <label style={lbl}>Assign members <span style={{ color: '#EF4444' }}>*</span></label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {WORKERS.map(w => {
-                const sel = memberIds.includes(w.id)
+
+            {/* Trigger / selected chips */}
+            <div
+              onClick={() => setMemberDropOpen(v => !v)}
+              style={{ minHeight: 40, padding: '6px 10px', border: `1px solid ${memberIds.length === 0 && memberDropOpen ? '#EF4444' : '#E5E7EB'}`, borderRadius: 7, cursor: 'pointer', display: 'flex', flexWrap: 'wrap', gap: 5, alignItems: 'center', background: '#fff', position: 'relative' }}>
+              {memberIds.length === 0 && (
+                <span style={{ fontSize: 13, color: '#9CA3AF' }}>Select members…</span>
+              )}
+              {memberIds.map(id => {
+                const w = WORKERS.find(ww => ww.id === id)!
                 return (
-                  <button key={w.id} onClick={() => toggleMember(w.id)} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 12px', border: `1.5px solid ${sel ? w.color : '#E5E7EB'}`, borderRadius: 99, background: sel ? w.bg : '#fff', cursor: 'pointer', fontSize: 12.5, fontWeight: sel ? 600 : 400, color: sel ? w.color : '#374151', fontFamily: 'inherit', transition: 'all 0.1s' }}>
-                    <Avatar initials={w.initials} color={w.color} bg={w.bg} size={20} />
+                  <span key={id} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px 2px 5px', background: w.bg, color: w.color, borderRadius: 99, fontSize: 12, fontWeight: 600, border: `1px solid ${w.color}44` }}>
+                    <Avatar initials={w.initials} color={w.color} bg={w.bg} size={16} />
                     {w.name}
-                    {sel && <Check width={11} height={11} />}
-                  </button>
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleMember(id) }}
+                      style={{ border: 'none', background: 'none', cursor: 'pointer', padding: 0, display: 'flex', color: w.color, lineHeight: 1 }}>
+                      <X width={11} height={11} />
+                    </button>
+                  </span>
                 )
               })}
+              <ChevronDown width={14} height={14} style={{ marginLeft: 'auto', color: '#9CA3AF', flexShrink: 0, transform: memberDropOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }} />
             </div>
-            {memberIds.length === 0 && <div style={{ fontSize: 11.5, color: '#EF4444', marginTop: 6 }}>Select at least one member</div>}
+
+            {/* Dropdown panel */}
+            {memberDropOpen && (
+              <div style={{ marginTop: 4, border: '1px solid #E5E7EB', borderRadius: 9, background: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
+
+                {/* Search + filters */}
+                <div style={{ padding: '10px 12px', borderBottom: '1px solid #F0F0F0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ position: 'relative' }}>
+                    <Search width={13} height={13} style={{ position: 'absolute', left: 9, top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', pointerEvents: 'none' }} />
+                    <input
+                      autoFocus
+                      value={memberSearch}
+                      onChange={e => setMemberSearch(e.target.value)}
+                      placeholder="Search by name…"
+                      onClick={e => e.stopPropagation()}
+                      style={{ ...inp, paddingLeft: 28, fontSize: 12.5 }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <select
+                      value={memberFilterClient}
+                      onChange={e => { setMemberFilterClient(e.target.value); setMemberFilterProject('') }}
+                      onClick={e => e.stopPropagation()}
+                      style={{ ...inp, fontSize: 12, flex: 1 }}>
+                      <option value="">All clients</option>
+                      {CLIENTS.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                    <select
+                      value={memberFilterProject}
+                      onChange={e => { setMemberFilterProject(e.target.value); setMemberFilterClient('') }}
+                      onClick={e => e.stopPropagation()}
+                      style={{ ...inp, fontSize: 12, flex: 1 }}>
+                      <option value="">All projects</option>
+                      {PROJECTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Select all row */}
+                <div
+                  onClick={e => { e.stopPropagation(); filteredWorkers.every(w => memberIds.includes(w.id)) ? setMemberIds(prev => prev.filter(id => !filteredWorkers.find(w => w.id === id))) : setMemberIds(prev => [...new Set([...prev, ...filteredWorkers.map(w => w.id)])]) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', background: '#FAFAFA', borderBottom: '1px solid #F0F0F0' }}>
+                  <div style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Users width={15} height={15} color="#6B7280" />
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>
+                      {filteredWorkers.every(w => memberIds.includes(w.id)) ? 'Deselect all' : 'Select all'}
+                    </div>
+                    <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }}>{filteredWorkers.length} member{filteredWorkers.length !== 1 ? 's' : ''} shown</div>
+                  </div>
+                  <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${filteredWorkers.length > 0 && filteredWorkers.every(w => memberIds.includes(w.id)) ? '#6C63FF' : filteredWorkers.some(w => memberIds.includes(w.id)) ? '#6C63FF' : '#D1D5DB'}`, background: filteredWorkers.length > 0 && filteredWorkers.every(w => memberIds.includes(w.id)) ? '#6C63FF' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, position: 'relative' }}>
+                    {filteredWorkers.length > 0 && filteredWorkers.every(w => memberIds.includes(w.id)) && <Check width={11} height={11} color="#fff" />}
+                    {filteredWorkers.some(w => memberIds.includes(w.id)) && !filteredWorkers.every(w => memberIds.includes(w.id)) && <div style={{ width: 8, height: 2, background: '#6C63FF', borderRadius: 1 }} />}
+                  </div>
+                </div>
+
+                {/* Worker list */}
+                <div style={{ maxHeight: 220, overflow: 'auto' }}>
+                  {filteredWorkers.length === 0 ? (
+                    <div style={{ padding: '14px 16px', fontSize: 13, color: '#9CA3AF', textAlign: 'center' }}>No members match</div>
+                  ) : filteredWorkers.map(w => {
+                    const sel = memberIds.includes(w.id)
+                    const meta = WORKER_META[w.id]
+                    const clientName = meta.clientId ? CLIENTS.find(c => c.id === meta.clientId)?.name : null
+                    const projNames = meta.projectIds.map(pid => PROJECTS.find(p => p.id === pid)?.name).filter(Boolean).join(', ')
+                    return (
+                      <div
+                        key={w.id}
+                        onClick={e => { e.stopPropagation(); toggleMember(w.id) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 14px', cursor: 'pointer', background: sel ? '#F5F3FF' : '#fff', borderBottom: '1px solid #F9F9F9', transition: 'background 0.1s' }}>
+                        <Avatar initials={w.initials} color={w.color} bg={w.bg} size={28} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13, fontWeight: sel ? 700 : 500, color: sel ? w.color : '#111827' }}>{w.name}</div>
+                          <div style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {[clientName, projNames].filter(Boolean).join(' · ') || 'Internal'}
+                          </div>
+                        </div>
+                        <div style={{ width: 18, height: 18, borderRadius: 5, border: `1.5px solid ${sel ? w.color : '#D1D5DB'}`, background: sel ? w.color : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {sel && <Check width={11} height={11} color="#fff" />}
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                {/* Footer */}
+                <div style={{ padding: '8px 12px', borderTop: '1px solid #F0F0F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: 12, color: '#6B7280' }}>{memberIds.length} selected</span>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {memberIds.length > 0 && (
+                      <button onClick={e => { e.stopPropagation(); setMemberIds([]) }} style={{ fontSize: 12, color: '#EF4444', border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Clear all</button>
+                    )}
+                    <button onClick={e => { e.stopPropagation(); setMemberDropOpen(false) }} style={{ fontSize: 12, fontWeight: 600, color: '#6C63FF', border: 'none', background: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit' }}>Done</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {memberIds.length === 0 && !memberDropOpen && <div style={{ fontSize: 11.5, color: '#EF4444', marginTop: 5 }}>Select at least one member</div>}
           </div>
         </div>
 

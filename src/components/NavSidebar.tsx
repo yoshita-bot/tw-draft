@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard, Clock, Activity, FolderKanban,
   CalendarDays, BarChart2, CreditCard, Users, Settings,
-  Camera, Monitor, Star, CheckSquare, UserCheck, UserCog,
+  Camera, Monitor, Star, CheckSquare, UserCheck,
   Trash2, TrendingUp, Calendar, Building2, ChevronDown,
   DollarSign, ClipboardList, Shield, SlidersHorizontal,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react'
 import { ROUTES } from '../lib/routes'
 
@@ -68,7 +69,6 @@ const NAV_ITEMS: NavItem[] = [
     icon: Settings, label: 'Settings', path: ROUTES.settings,
     children: [
       { icon: Settings, label: 'Organization',     path: ROUTES.settings          },
-      { icon: UserCog,  label: 'Employees',        path: ROUTES.settingsEmployees },
       { icon: Shield,              label: 'Security & Login', path: ROUTES.settingsSecurity      },
       { icon: SlidersHorizontal,   label: 'Member Configurations',   path: ROUTES.settingsTrackingRules },
     ],
@@ -112,6 +112,7 @@ export function NavSidebar() {
 
   // Unlike other sections, Favourites is open by default
   const [favOpen, setFavOpen] = useState<boolean>(() => localStorage.getItem(FAV_OPEN_KEY) !== 'closed')
+  const [collapsed, setCollapsed] = useState(false)
 
   useEffect(() => {
     localStorage.setItem(FAV_KEY, JSON.stringify(favourites))
@@ -250,7 +251,7 @@ export function NavSidebar() {
   }
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar${collapsed ? ' sidebar-collapsed' : ''}`}>
       <div className="sidebar-logo">
         <div className="logo-icon">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -258,10 +259,20 @@ export function NavSidebar() {
             <polyline points="12 6 12 12 16 14"/>
           </svg>
         </div>
-        <span>TimeWorks</span>
+        {!collapsed && <span>TimeWorks</span>}
+        <button
+          className="sidebar-collapse-btn"
+          onClick={() => setCollapsed(c => !c)}
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        >
+          {collapsed
+            ? <PanelLeftOpen width={16} height={16} strokeWidth={1.8} />
+            : <PanelLeftClose width={16} height={16} strokeWidth={1.8} />
+          }
+        </button>
       </div>
 
-      <nav className="nav-section">
+      {!collapsed && <nav className="nav-section">
         {renderNavItem(NAV_ITEMS[0])}
 
         <div>
@@ -310,7 +321,7 @@ export function NavSidebar() {
         </div>
 
         {NAV_ITEMS.slice(1).map(renderNavItem)}
-      </nav>
+      </nav>}
     </aside>
   )
 }
