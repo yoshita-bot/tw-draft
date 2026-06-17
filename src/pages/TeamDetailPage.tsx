@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Users, Briefcase, Calendar, Crown, Clock, Pencil, Search, X, Mail, Activity, Timer, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react'
+import { ArrowLeft, Users, Briefcase, Calendar, Crown, Clock, Pencil, Search, X, Mail, Activity, Timer, ChevronDown, ChevronUp, ExternalLink, CalendarDays, Filter } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
 import { TEAM_MAP, updateTeam, TEAM_COLORS, type TeamRecord } from '../data/teamsData'
 import { EMPLOYEES, EMPLOYEE_MAP, SCHEDULE_TYPE_LABELS } from '../data/employeesData'
+import { CLIENTS, CLIENT_MAP } from '../data/clientsData'
 import { PROJECTS } from '../data/projectsData'
 import { ROUTES, peopleProfile } from '../lib/routes'
 import { TodaysScreenshotsWidget, WorkSessionsWidget, ScheduleCard, TimesheetWidget } from '../components/profileWidgets'
@@ -55,6 +56,189 @@ function StatItem({ icon, label, value, sub }: { icon: React.ReactNode; label: s
       </div>
       <div style={{ fontSize: 15, fontWeight: 700, color: '#111827' }}>{value}</div>
       {sub && <div style={{ fontSize: 11.5, color: '#9CA3AF' }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Time range ────────────────────────────────────────────────────────────────
+
+type TimePreset = 'today' | 'this_week' | 'last_7' | 'this_month' | 'last_30' | 'custom'
+
+const TIME_PRESETS: { id: TimePreset; label: string }[] = [
+  { id: 'today',      label: 'Today' },
+  { id: 'this_week',  label: 'This Week' },
+  { id: 'last_7',     label: 'Last 7 Days' },
+  { id: 'this_month', label: 'This Month' },
+  { id: 'last_30',    label: 'Last 30 Days' },
+  { id: 'custom',     label: 'Custom Range' },
+]
+
+function getPresetLabel(preset: TimePreset, customStart?: string, customEnd?: string) {
+  if (preset === 'custom' && customStart && customEnd) {
+    const fmt = (s: string) => new Date(s + 'T00:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    return `${fmt(customStart)} – ${fmt(customEnd)}`
+  }
+  return TIME_PRESETS.find(p => p.id === preset)?.label ?? 'This Week'
+}
+
+function TimeRangePicker({ preset, customStart, customEnd, onPreset, onCustom }: {
+  preset: TimePreset
+  customStart: string
+  customEnd: string
+  onPreset: (p: TimePreset) => void
+  onCustom: (s: string, e: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [tmpStart, setTmpStart] = useState(customStart)
+  const [tmpEnd, setTmpEnd] = useState(customEnd)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(x => !x)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 6,
+          padding: '6px 12px', borderRadius: 8,
+          border: '1px solid #E5E7EB', background: '#fff',
+          fontSize: 12.5, fontWeight: 600, color: '#374151',
+          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}
+        onMouseEnter={e => (e.currentTarget.style.borderColor = '#C4B5FD')}
+        onMouseLeave={e => (e.currentTarget.style.borderColor = '#E5E7EB')}
+      >
+        <CalendarDays width={13} height={13} color="#6C63FF" />
+        {getPresetLabel(preset, customStart, customEnd)}
+        <ChevronDown width={12} height={12} color="#9CA3AF" />
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 200, overflow: 'hidden' }}>
+          {TIME_PRESETS.filter(p => p.id !== 'custom').map(p => (
+            <div
+              key={p.id}
+              onClick={() => { onPreset(p.id); setOpen(false) }}
+              style={{ padding: '9px 14px', fontSize: 13, fontWeight: preset === p.id ? 700 : 500, color: preset === p.id ? '#6C63FF' : '#374151', cursor: 'pointer', background: preset === p.id ? '#F5F3FF' : 'transparent', transition: 'background 0.1s' }}
+              onMouseEnter={e => { if (preset !== p.id) e.currentTarget.style.background = '#FAFAFA' }}
+              onMouseLeave={e => { if (preset !== p.id) e.currentTarget.style.background = 'transparent' }}
+            >
+              {p.label}
+            </div>
+          ))}
+          <div style={{ borderTop: '1px solid #F3F4F6', padding: '10px 14px' }}>
+            <div style={{ fontSize: 11.5, fontWeight: 700, color: '#9CA3AF', letterSpacing: '0.06em', textTransform: 'uppercase', marginBottom: 8 }}>Custom Range</div>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+              <input type="date" value={tmpStart} onChange={e => setTmpStart(e.target.value)} style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1px solid #E5E7EB', fontSize: 12, color: '#111827', outline: 'none' }} />
+              <span style={{ fontSize: 11, color: '#9CA3AF' }}>–</span>
+              <input type="date" value={tmpEnd} onChange={e => setTmpEnd(e.target.value)} style={{ flex: 1, padding: '5px 8px', borderRadius: 6, border: '1px solid #E5E7EB', fontSize: 12, color: '#111827', outline: 'none' }} />
+            </div>
+            <button
+              onClick={() => { if (tmpStart && tmpEnd && tmpStart <= tmpEnd) { onPreset('custom'); onCustom(tmpStart, tmpEnd); setOpen(false) } }}
+              disabled={!tmpStart || !tmpEnd || tmpStart > tmpEnd}
+              style={{ width: '100%', padding: '6px', borderRadius: 6, border: 'none', background: tmpStart && tmpEnd && tmpStart <= tmpEnd ? '#6C63FF' : '#E5E7EB', color: tmpStart && tmpEnd && tmpStart <= tmpEnd ? '#fff' : '#9CA3AF', fontSize: 12, fontWeight: 600, cursor: tmpStart && tmpEnd && tmpStart <= tmpEnd ? 'pointer' : 'default', fontFamily: 'inherit' }}
+            >
+              Apply
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ── Department derivation ─────────────────────────────────────────────────────
+
+function deptFromRole(role: string): string {
+  const r = role.toLowerCase()
+  if (r.includes('engineer') || r.includes('developer') || r.includes('devops') || r.includes('e-commerce dev') || r.includes('systems')) return 'Engineering'
+  if (r.includes('designer') || r.includes('ux') || r.includes('ui ')) return 'Design'
+  if (r.includes('qa') || r.includes('quality')) return 'QA'
+  if (r.includes('product manager') || r.includes('project manager') || r.includes('scrum')) return 'Product & PM'
+  if (r.includes('data analyst') || r.includes('data engineer') || r.includes('analytics') || r.includes('business analyst')) return 'Analytics'
+  if (r.includes('content') || r.includes('copywriter') || r.includes('seo')) return 'Content'
+  if (r.includes('operations') || r.includes('finance') || r.includes('legal') || r.includes('admin') || r.includes('automation')) return 'Operations'
+  return 'Other'
+}
+
+// ── Filter bar ────────────────────────────────────────────────────────────────
+
+function FilterDropdown({ label, options, selected, onToggle, onClear }: {
+  label: string
+  options: { id: string; label: string }[]
+  selected: string[]
+  onToggle: (id: string) => void
+  onClear: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const active = selected.length > 0
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button
+        onClick={() => setOpen(x => !x)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 5,
+          padding: '6px 12px', borderRadius: 8,
+          border: `1px solid ${active ? '#C4B5FD' : '#E5E7EB'}`,
+          background: active ? '#F5F3FF' : '#fff',
+          fontSize: 12.5, fontWeight: 600,
+          color: active ? '#6C63FF' : '#374151',
+          cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap',
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = '#C4B5FD' }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = '#E5E7EB' }}
+      >
+        {label}
+        {active && <span style={{ background: '#6C63FF', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '1px 6px', marginLeft: 2 }}>{selected.length}</span>}
+        <ChevronDown width={12} height={12} color="#9CA3AF" />
+      </button>
+
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180, overflow: 'hidden' }}>
+          {active && (
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => { onClear(); setOpen(false) }} style={{ fontSize: 11.5, color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontWeight: 600 }}>Clear</button>
+            </div>
+          )}
+          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+            {options.map(opt => {
+              const checked = selected.includes(opt.id)
+              return (
+                <div
+                  key={opt.id}
+                  onClick={() => onToggle(opt.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', cursor: 'pointer', background: checked ? '#F5F3FF' : 'transparent', transition: 'background 0.1s' }}
+                  onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#FAFAFA' }}
+                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <div style={{ width: 15, height: 15, borderRadius: 4, border: `2px solid ${checked ? '#6C63FF' : '#D1D5DB'}`, background: checked ? '#6C63FF' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 9, lineHeight: 1 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: '#111827' }}>{opt.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -496,6 +680,21 @@ export function TeamDetailPage() {
   const [editing, setEditing] = useState(false)
   const [activeTab, setActiveTab] = useState<Tab>('overview')
 
+  // Time range
+  const [timePreset, setTimePreset] = useState<TimePreset>('this_week')
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [customStart, setCustomStart] = useState(todayStr)
+  const [customEnd, setCustomEnd] = useState(todayStr)
+
+  // Filters
+  const [filterClients, setFilterClients] = useState<string[]>([])
+  const [filterProjects, setFilterProjects] = useState<string[]>([])
+  const [filterDepts, setFilterDepts] = useState<string[]>([])
+
+  function toggleFilter(setter: React.Dispatch<React.SetStateAction<string[]>>, id: string) {
+    setter(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
   if (!team) {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -515,7 +714,29 @@ export function TeamDetailPage() {
   const lead = team.leadId ? EMPLOYEE_MAP[team.leadId] : null
   const members = team.memberIds.map(id => EMPLOYEES.find(e => e.id === id)).filter(Boolean)
   const activeMembers = members.filter(e => e!.status === 'active').length
-  const sortedMemberIds = [...team.memberIds].sort((a, b) => (a === team.leadId ? -1 : b === team.leadId ? 1 : 0))
+
+  // All unique clients/projects/depts across team members (for filter options)
+  const teamClientIds = [...new Set(members.map(e => e!.clientId))]
+  const teamProjects = [...new Set(members.flatMap(e => e!.projects))].sort()
+  const teamDepts = [...new Set(members.map(e => deptFromRole(e!.role)))].sort()
+
+  const clientOptions = teamClientIds.map(id => ({ id, label: CLIENT_MAP[id]?.name ?? id }))
+  const projectOptions = teamProjects.map(p => ({ id: p, label: p }))
+  const deptOptions = teamDepts.map(d => ({ id: d, label: d }))
+
+  const hasFilters = filterClients.length > 0 || filterProjects.length > 0 || filterDepts.length > 0
+
+  // Apply filters to member list
+  const filteredMemberIds = team.memberIds.filter(id => {
+    const emp = EMPLOYEE_MAP[id]
+    if (!emp) return false
+    if (filterClients.length > 0 && !filterClients.includes(emp.clientId)) return false
+    if (filterProjects.length > 0 && !filterProjects.some(p => emp.projects.includes(p))) return false
+    if (filterDepts.length > 0 && !filterDepts.includes(deptFromRole(emp.role))) return false
+    return true
+  })
+
+  const sortedMemberIds = [...filteredMemberIds].sort((a, b) => (a === team.leadId ? -1 : b === team.leadId ? 1 : 0))
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -610,6 +831,67 @@ export function TeamDetailPage() {
               {tab.icon}{tab.label}
             </button>
           ))}
+        </div>
+
+        {/* ── Filter + Time toolbar ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <TimeRangePicker
+            preset={timePreset}
+            customStart={customStart}
+            customEnd={customEnd}
+            onPreset={setTimePreset}
+            onCustom={(s, e) => { setCustomStart(s); setCustomEnd(e) }}
+          />
+
+          <div style={{ width: 1, height: 20, background: '#E5E7EB', marginLeft: 2, marginRight: 2 }} />
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Filter width={12} height={12} color="#9CA3AF" />
+            <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>Filter:</span>
+          </div>
+
+          {clientOptions.length > 1 && (
+            <FilterDropdown
+              label="Client"
+              options={clientOptions}
+              selected={filterClients}
+              onToggle={id => toggleFilter(setFilterClients, id)}
+              onClear={() => setFilterClients([])}
+            />
+          )}
+
+          <FilterDropdown
+            label="Project"
+            options={projectOptions}
+            selected={filterProjects}
+            onToggle={id => toggleFilter(setFilterProjects, id)}
+            onClear={() => setFilterProjects([])}
+          />
+
+          {deptOptions.length > 1 && (
+            <FilterDropdown
+              label="Department"
+              options={deptOptions}
+              selected={filterDepts}
+              onToggle={id => toggleFilter(setFilterDepts, id)}
+              onClear={() => setFilterDepts([])}
+            />
+          )}
+
+          {hasFilters && (
+            <button
+              onClick={() => { setFilterClients([]); setFilterProjects([]); setFilterDepts([]) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid #FCA5A5', background: '#FEF2F2', fontSize: 12, fontWeight: 600, color: '#DC2626', cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              <X width={11} height={11} /> Clear filters
+            </button>
+          )}
+
+          <div style={{ marginLeft: 'auto', fontSize: 12, color: '#9CA3AF' }}>
+            {sortedMemberIds.length !== team.memberIds.length
+              ? `${sortedMemberIds.length} of ${team.memberIds.length} members`
+              : `${team.memberIds.length} member${team.memberIds.length !== 1 ? 's' : ''}`}
+          </div>
         </div>
 
         {/* ── Tab: Activity ── */}

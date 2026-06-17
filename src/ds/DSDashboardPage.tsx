@@ -1,5 +1,7 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { ChevronDown, Filter, X, GripVertical } from 'lucide-react'
 import { TopBar } from '../components/TopBar'
+import { DateRangePickerButton, DEFAULT_PRESETS, type DateRange } from '../components/DateRangePicker'
 import { DSMeDashboard } from './DSMeDashboard'
 import { DSSmallWidget } from './DSSmallWidget'
 import { AttendanceKPIs } from '../components/widgets/AttendanceKPIs'
@@ -15,8 +17,83 @@ import { ProjectActivityWidget } from '../components/widgets/ProjectActivityWidg
 import { TodosWidget } from '../components/widgets/TodosWidget'
 import { ManageWidgetsDrawer } from '../components/ManageWidgetsDrawer'
 import { SMALL_WIDGETS, LARGE_WIDGETS_DEF } from '../data/dashboardData'
-import { GripVertical } from 'lucide-react'
+import { CLIENTS } from '../data/clientsData'
+import { EMPLOYEES } from '../data/employeesData'
+import { TEAMS } from '../data/teamsData'
 import './dsDashboard.css'
+
+// ── Filter dropdown ───────────────────────────────────────────────────────────
+
+function FilterDropdown({ label, options, selected, onToggle, onClear }: {
+  label: string; options: { id: string; label: string }[]
+  selected: string[]; onToggle: (id: string) => void; onClear: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', h)
+    return () => document.removeEventListener('mousedown', h)
+  }, [])
+
+  const active = selected.length > 0
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <button onClick={() => setOpen(x => !x)}
+        style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 8, border: `1px solid ${active ? '#C4B5FD' : '#E5E7EB'}`, background: active ? '#F5F3FF' : '#fff', fontSize: 12.5, fontWeight: 600, color: active ? '#6C63FF' : '#374151', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.borderColor = '#C4B5FD' }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.borderColor = active ? '#C4B5FD' : '#E5E7EB' }}
+      >
+        {label}
+        {active && <span style={{ background: '#6C63FF', color: '#fff', borderRadius: 99, fontSize: 10, fontWeight: 700, padding: '1px 6px', marginLeft: 2 }}>{selected.length}</span>}
+        <ChevronDown width={12} height={12} color="#9CA3AF" />
+      </button>
+      {open && (
+        <div style={{ position: 'absolute', top: 'calc(100% + 6px)', left: 0, zIndex: 100, background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, boxShadow: '0 8px 24px rgba(0,0,0,0.12)', minWidth: 180, overflow: 'hidden' }}>
+          {active && (
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid #F3F4F6', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => { onClear(); setOpen(false) }} style={{ fontSize: 11.5, color: '#6C63FF', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontFamily: 'inherit', fontWeight: 600 }}>Clear</button>
+            </div>
+          )}
+          <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+            {options.map(opt => {
+              const checked = selected.includes(opt.id)
+              return (
+                <div key={opt.id} onClick={() => onToggle(opt.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 12px', cursor: 'pointer', background: checked ? '#F5F3FF' : 'transparent' }}
+                  onMouseEnter={e => { if (!checked) e.currentTarget.style.background = '#FAFAFA' }}
+                  onMouseLeave={e => { if (!checked) e.currentTarget.style.background = checked ? '#F5F3FF' : 'transparent' }}
+                >
+                  <div style={{ width: 15, height: 15, borderRadius: 4, border: `2px solid ${checked ? '#6C63FF' : '#D1D5DB'}`, background: checked ? '#6C63FF' : '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    {checked && <span style={{ color: '#fff', fontSize: 9, lineHeight: 1 }}>✓</span>}
+                  </div>
+                  <span style={{ fontSize: 12.5, fontWeight: 500, color: '#111827' }}>{opt.label}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function deptFromRole(role: string): string {
+  const r = role.toLowerCase()
+  if (r.includes('engineer') || r.includes('developer') || r.includes('devops') || r.includes('systems')) return 'Engineering'
+  if (r.includes('designer') || r.includes('ux') || r.includes('ui ')) return 'Design'
+  if (r.includes('qa') || r.includes('quality')) return 'QA'
+  if (r.includes('product manager') || r.includes('project manager') || r.includes('scrum')) return 'Product & PM'
+  if (r.includes('data analyst') || r.includes('data engineer') || r.includes('analytics') || r.includes('business analyst')) return 'Analytics'
+  if (r.includes('content') || r.includes('copywriter') || r.includes('seo')) return 'Content'
+  return 'Operations'
+}
+
+const ALL_CLIENT_OPTIONS = CLIENTS.filter(c => c.id !== 'internal' && c.status !== 'inactive').map(c => ({ id: c.id, label: c.name }))
+const ALL_PROJECT_OPTIONS = [...new Set(EMPLOYEES.flatMap(e => e.projects))].sort().map(p => ({ id: p, label: p }))
+const ALL_TEAM_OPTIONS = TEAMS.map(t => ({ id: t.id, label: t.name }))
 
 function TeamWidgetContent({ id, gripNode }: { id: string; gripNode?: React.ReactNode }) {
   switch (id) {
@@ -40,6 +117,18 @@ type ViewScope = 'me' | 'team'
 export function DSDashboardPage() {
   const [drawerOpen, setDrawerOpen]     = useState(false)
   const [scope, setScope]               = useState<ViewScope>('team')
+
+  // Time range + filters
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const [activePreset, setActivePreset] = useState('last_7')
+  const [dateRange, setDateRange] = useState<DateRange>(() => DEFAULT_PRESETS.find(p => p.id === 'last_7')!.getRange(todayStr))
+  const [filterClients,  setFilterClients]  = useState<string[]>([])
+  const [filterProjects, setFilterProjects] = useState<string[]>([])
+  const [filterTeams,    setFilterTeams]    = useState<string[]>([])
+  function toggleFilter(setter: React.Dispatch<React.SetStateAction<string[]>>, id: string) {
+    setter(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+  const hasFilters = filterClients.length > 0 || filterProjects.length > 0 || filterTeams.length > 0
   const [smallVisible, setSmallVisible] = useState<Set<string>>(
     new Set(SMALL_WIDGETS.map((w) => w.id))
   )
@@ -95,7 +184,7 @@ export function DSDashboardPage() {
       <TopBar crumbs={[{ label: 'DS Dashboard' }]} />
       <main className="content">
 
-        {/* Me / Team segmented control */}
+        {/* Header row: toggle + date/filter + manage widgets */}
         <div className="ds-page-header">
           <div className="ds-toggle-bar">
             {(['me', 'team'] as ViewScope[]).map(s => (
@@ -108,6 +197,31 @@ export function DSDashboardPage() {
               </button>
             ))}
           </div>
+
+          {scope === 'team' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, marginLeft: 12 }}>
+              <DateRangePickerButton
+                start={dateRange.start} end={dateRange.end}
+                activePreset={activePreset}
+                onApply={r => setDateRange(r)}
+                onPresetClick={setActivePreset}
+              />
+              <div style={{ width: 1, height: 20, background: '#E5E7EB' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                <Filter width={12} height={12} color="#9CA3AF" />
+                <span style={{ fontSize: 12, color: '#9CA3AF', fontWeight: 600 }}>Filter:</span>
+              </div>
+              <FilterDropdown label="Client"     options={ALL_CLIENT_OPTIONS}  selected={filterClients}  onToggle={id => toggleFilter(setFilterClients, id)}  onClear={() => setFilterClients([])} />
+              <FilterDropdown label="Project"    options={ALL_PROJECT_OPTIONS} selected={filterProjects} onToggle={id => toggleFilter(setFilterProjects, id)} onClear={() => setFilterProjects([])} />
+              <FilterDropdown label="Team"       options={ALL_TEAM_OPTIONS}    selected={filterTeams}    onToggle={id => toggleFilter(setFilterTeams, id)}    onClear={() => setFilterTeams([])} />
+              {hasFilters && (
+                <button onClick={() => { setFilterClients([]); setFilterProjects([]); setFilterTeams([]) }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 8, border: '1px solid #FCA5A5', background: '#FEF2F2', fontSize: 12, fontWeight: 600, color: '#DC2626', cursor: 'pointer', fontFamily: 'inherit' }}
+                ><X width={11} height={11} /> Clear filters</button>
+              )}
+            </div>
+          )}
+
           {scope === 'team' && (
             <button className="manage-btn" onClick={() => setDrawerOpen(true)}>
               <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
